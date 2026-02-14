@@ -1,0 +1,67 @@
+## .NET / C# ##
+
+# Build outputs
+src/*/bin/
+src/*/obj/
+bin/
+obj/
+
+# NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+.nuget/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Test results
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# Publish output
+publish/
+**/publish/
+
+# App settings with secrets (keep appsettings.json, exclude local overrides)
+appsettings.*.local.json
+secrets.json
+
+# Logs
+*.log
+logs/
+
+# Temp files
+*.tmp
+*.temp
+
+## Generated newsletter output ##
+output/
+
+## Reference materials ##
+reference/
+
+## OS ##
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
