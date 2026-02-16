@@ -52,6 +52,9 @@ output/
 ## Reference materials ##
 reference/
 
+## Cache ##
+.cache/
+
 ## OS ##
 
 # Windows

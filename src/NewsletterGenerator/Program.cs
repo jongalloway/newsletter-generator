@@ -13,13 +13,33 @@ AnsiConsole.Write(new Rule("[cornflowerblue]GitHub Copilot CLI & SDK Weekly Gene
 AnsiConsole.WriteLine();
 
 // ── Args ──────────────────────────────────────────────────────────────────────
+// Check for --clear-cache flag
+bool clearCache = args.Contains("--clear-cache") || args.Contains("-c");
+
+if (clearCache)
+{
+    var cacheDir = Path.Combine(Directory.GetCurrentDirectory(), ".cache");
+    if (Directory.Exists(cacheDir))
+    {
+        Directory.Delete(cacheDir, recursive: true);
+        AnsiConsole.MarkupLine("[green]✓[/] Cache cleared");
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[dim]No cache to clear[/]");
+    }
+}
+
 // Determine the week to use based on current day of week:
 // Monday-Tuesday: previous complete week (Monday-Sunday)
 // Wednesday-Sunday: current week (Monday through today)
 
 DateOnly weekStartDate, weekEndDate;
 
-if (args.Length > 0 && int.TryParse(args[0], out var daysBack))
+// Filter out flag arguments to get numeric argument
+var numericArgs = args.Where(a => !a.StartsWith("-")).ToArray();
+
+if (numericArgs.Length > 0 && int.TryParse(numericArgs[0], out var daysBack))
 {
     // Manual override: use specified days back
     var today = DateOnly.FromDateTime(DateTime.Now);
@@ -177,6 +197,9 @@ string newsSection = string.Empty;
 string releaseSection = string.Empty;
 string welcomeSummary = string.Empty;
 
+// Initialize cache service
+var cache = new CacheService();
+
 await AnsiConsole.Status()
     .Spinner(Spinner.Known.Star)
     .SpinnerStyle(Style.Parse("cornflowerblue"))
@@ -190,13 +213,13 @@ await AnsiConsole.Status()
             {
                 ctx.Status("Generating News and Announcements...");
                 newsSection = await newsletterService.GenerateNewsAndAnnouncementsAsync(
-                    changelogEntries, blogEntries, weekStart, weekEnd);
+                    changelogEntries, blogEntries, weekStart, weekEnd, cache);
             }
 
             // Generate Project updates section
             ctx.Status("Generating Project updates...");
             releaseSection = await newsletterService.GenerateReleaseSectionAsync(
-                cliReleases, sdkReleases, weekStart, weekEnd);
+                cliReleases, sdkReleases, weekStart, weekEnd, cache);
 
             // Extract TLDR bullets from release section (between "Project updates" and "## Releases")
             var releaseSummaryBullets = ExtractTLDRBullets(releaseSection);
@@ -204,7 +227,7 @@ await AnsiConsole.Status()
             // Generate Welcome summary
             ctx.Status("Generating Welcome summary...");
             welcomeSummary = await newsletterService.GenerateWelcomeSummaryAsync(
-                newsSection, releaseSummaryBullets, weekStart, weekEnd);
+                newsSection, releaseSummaryBullets, weekStart, weekEnd, cache);
         }
         catch (Exception ex)
         {

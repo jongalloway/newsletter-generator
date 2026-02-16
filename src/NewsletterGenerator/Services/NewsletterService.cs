@@ -11,10 +11,21 @@ public class NewsletterService
         string newsSection,
         string releaseSummaryBullets,
         DateTimeOffset weekStart,
-        DateTimeOffset weekEnd)
+        DateTimeOffset weekEnd,
+        CacheService cache)
     {
         if (string.IsNullOrEmpty(newsSection) && string.IsNullOrEmpty(releaseSummaryBullets))
-            return "It's been another week of updates for GitHub Copilot CLI & SDK!";
+            return "This week brings updates to GitHub Copilot CLI & SDK.";
+
+        // Check cache
+        var sourceData = $"{newsSection}|||{releaseSummaryBullets}";
+        var sourceHash = CacheService.GetContentHash(sourceData);
+        var cached = await cache.TryGetCachedAsync("welcome-summary", sourceHash);
+        if (cached != null)
+        {
+            AnsiConsole.MarkupLine("[dim]Using cached Welcome summary[/]");
+            return cached;
+        }
 
         AnsiConsole.MarkupLine("[grey]Generating Welcome summary...[/]");
         await using var client = new CopilotClient();
@@ -38,7 +49,11 @@ public class NewsletterService
                     - Write like you're informing colleagues, not selling a product
 
                     Keep it to 2-3 sentences. Focus on what actually shipped and what developers can use.
-                    Output ONLY the paragraph text — no greeting, no markdown, no preamble.
+                    
+                    OUTPUT REQUIREMENTS:
+                    - Output ONLY the paragraph text — no greeting, no markdown, no preamble
+                    - Do NOT include meta-commentary like "Here's a summary" or "Based on the material"
+                    - Start directly with the content
                     """
             }
         });
@@ -64,39 +79,33 @@ public class NewsletterService
             Generate ONLY the paragraph text (no markdown, no greeting).
             """;
 
-        var response = new StringBuilder();
-        var tcs = new TaskCompletionSource<string>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-
-        session.On(evt =>
-        {
-            switch (evt)
-            {
-                case AssistantMessageEvent msg:
-                    response.Clear();
-                    response.Append(msg.Data.Content);
-                    break;
-                case SessionIdleEvent:
-                    tcs.TrySetResult(response.ToString());
-                    break;
-                case SessionErrorEvent err:
-                    tcs.TrySetException(new InvalidOperationException(err.Data.Message));
-                    break;
-            }
-        });
-
-        await session.SendAsync(new MessageOptions { Prompt = prompt });
-        return await tcs.Task;
+        var result = await SendPromptAsync(session, prompt);
+        
+        // Cache the result
+        await cache.SaveCacheAsync("welcome-summary", result, sourceHash);
+        
+        return result;
     }
 
     public async Task<string> GenerateNewsAndAnnouncementsAsync(
         List<ReleaseEntry> changelogEntries,
         List<ReleaseEntry> blogEntries,
         DateTimeOffset weekStart,
-        DateTimeOffset weekEnd)
+        DateTimeOffset weekEnd,
+        CacheService cache)
     {
         if (changelogEntries.Count == 0 && blogEntries.Count == 0)
             return string.Empty;
+
+        // Check cache
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { changelogEntries, blogEntries });
+        var sourceHash = CacheService.GetContentHash(sourceData);
+        var cached = await cache.TryGetCachedAsync("news-announcements", sourceHash);
+        if (cached != null)
+        {
+            AnsiConsole.MarkupLine("[dim]Using cached News and Announcements[/]");
+            return cached;
+        }
 
         AnsiConsole.MarkupLine("[grey]Generating News and Announcements...[/]");
         await using var client = new CopilotClient();
@@ -137,49 +146,49 @@ public class NewsletterService
                     - Write like you're informing colleagues, not selling a product
 
                     Keep it concise but informative. If there's nothing relevant to CLI/SDK users, return an empty section.
-                    Output ONLY Markdown — no preamble, no code fences.
+                    
+                    OUTPUT REQUIREMENTS:
+                    - Output ONLY the final newsletter Markdown content
+                    - NO preamble, NO commentary, NO meta-statements
+                    - Do NOT include phrases like "Based on my review", "Here's the content", etc.
+                    - Start directly with the section header or content
+                    - NO code fences, NO explanations
                     """
             }
         });
 
         var prompt = BuildNewsPrompt(changelogEntries, blogEntries, weekStart, weekEnd);
-
-        var response = new StringBuilder();
-        var tcs = new TaskCompletionSource<string>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-
-        session.On(evt =>
-        {
-            switch (evt)
-            {
-                case AssistantMessageEvent msg:
-                    response.Clear();
-                    response.Append(msg.Data.Content);
-                    break;
-                case SessionIdleEvent:
-                    tcs.TrySetResult(response.ToString());
-                    break;
-                case SessionErrorEvent err:
-                    tcs.TrySetException(new InvalidOperationException(err.Data.Message));
-                    break;
-            }
-        });
-
-        await session.SendAsync(new MessageOptions { Prompt = prompt });
-        return await tcs.Task;
+        var result = await SendPromptAsync(session, prompt);
+        
+        // Cache the result
+        await cache.SaveCacheAsync("news-announcements", result, sourceHash);
+        
+        return result;
     }
 
-    public async Task<string> GenerateReleaseSectionAsync(
-        List<ReleaseEntry> cliReleases,
-        List<ReleaseEntry> sdkReleases,
+    public async Task<string> GenerateProductReleaseAsync(
+        string productName,
+        List<ReleaseEntry> releases,
         DateTimeOffset weekStart,
-        DateTimeOffset weekEnd)
+        DateTimeOffset weekEnd,
+        CacheService cache)
     {
-        AnsiConsole.MarkupLine("[grey]Starting Copilot CLI...[/]");
+        // Check cache first
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(releases);
+        var sourceHash = CacheService.GetContentHash(sourceData);
+        var cacheKey = $"{productName.Replace(" ", "-").ToLower()}-releases";
+        
+        var cached = await cache.TryGetCachedAsync(cacheKey, sourceHash);
+        if (cached != null)
+        {
+            AnsiConsole.MarkupLine($"[dim]Using cached {productName} summary[/]");
+            return cached;
+        }
+
+        AnsiConsole.MarkupLine($"[grey]Generating {productName} summary...[/]");
         await using var client = new CopilotClient();
         await client.StartAsync();
 
-        AnsiConsole.MarkupLine("[grey]Creating session...[/]");
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
             SystemMessage = new SystemMessageConfig
@@ -200,17 +209,53 @@ public class NewsletterService
                       with many changes, combine even more aggressively.
                     - THEMES OVER DETAILS: Focus on high-level themes (e.g., "Terminal UX improvements")
                       rather than individual features (e.g., listing every keyboard shortcut).
-                    - CROSS-REFERENCE: where a changelog entry or blog post provides useful context,
-                      weave it in — but do not duplicate content.
 
                     Write concise, well-organized Markdown.
-                    Output ONLY the requested Markdown — no preamble, no commentary, no code fences.
+                    
+                    OUTPUT REQUIREMENTS:
+                    - Output ONLY the requested Markdown — no preamble, no commentary, no code fences
+                    - Do NOT include meta-statements like "Here are the highlights" or "Based on my analysis"
+                    - Start directly with the section header (### GitHub Copilot CLI or ### GitHub Copilot SDK)
                     """
             }
         });
 
-        var prompt = BuildPrompt(cliReleases, sdkReleases, weekStart, weekEnd);
+        var prompt = BuildProductPrompt(productName, releases, weekStart, weekEnd);
+        var result = await SendPromptAsync(session, prompt);
+        
+        // Cache the result
+        await cache.SaveCacheAsync(cacheKey, result, sourceHash);
+        
+        return result;
+    }
 
+    public async Task<string> GenerateReleaseSectionAsync(
+        List<ReleaseEntry> cliReleases,
+        List<ReleaseEntry> sdkReleases,
+        DateTimeOffset weekStart,
+        DateTimeOffset weekEnd,
+        CacheService cache)
+    {
+        // Generate CLI and SDK summaries separately (with caching)
+        var cliSummary = await GenerateProductReleaseAsync("GitHub Copilot CLI", cliReleases, weekStart, weekEnd, cache);
+        var sdkSummary = await GenerateProductReleaseAsync("GitHub Copilot SDK", sdkReleases, weekStart, weekEnd, cache);
+        
+        // Combine into final section
+        var sb = new StringBuilder();
+        sb.AppendLine("---");
+        sb.AppendLine("## Project updates");
+        sb.AppendLine();
+        sb.Append(cliSummary);
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.Append(sdkSummary);
+        
+        return sb.ToString();
+    }
+
+    private static async Task<string> SendPromptAsync(CopilotSession session, string prompt)
+    {
         var response = new StringBuilder();
         var tcs = new TaskCompletionSource<string>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -232,26 +277,24 @@ public class NewsletterService
             }
         });
 
-        AnsiConsole.MarkupLine("[grey]Sending prompt to Copilot...[/]");
         await session.SendAsync(new MessageOptions { Prompt = prompt });
         return await tcs.Task;
     }
 
-    private static string BuildPrompt(
-        List<ReleaseEntry> cliReleases,
-        List<ReleaseEntry> sdkReleases,
+    private static string BuildProductPrompt(
+        string productName,
+        List<ReleaseEntry> releases,
         DateTimeOffset weekStart,
         DateTimeOffset weekEnd)
     {
         var sb = new StringBuilder();
+        var repoName = productName.ToLower().Replace("github ", "").Replace(" ", "-");
 
         sb.AppendLine($"""
-            Generate the "Project updates" section for a GitHub Copilot CLI & SDK weekly newsletter
+            Generate the "{productName}" section for a weekly newsletter
             covering the week of {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
 
-            You have two sources of information below:
-            1. GitHub Copilot CLI release notes (from github/copilot-cli Atom feed) - {cliReleases.Count} releases
-            2. GitHub Copilot SDK release notes (from github/copilot-sdk Atom feed) - {sdkReleases.Count} releases
+            You have release notes from {productName} - {releases.Count} releases
 
             Focus ONLY on the release notes. Do NOT include changelog or blog items in this section.
             
@@ -262,20 +305,16 @@ public class NewsletterService
             - Focus on new capabilities and major workflow changes only
             - If a release has 20+ changes, combine them into 3-5 thematic bullets
 
-            Pick the 4–6 most impactful developer-facing highlights per project for the week.
+            Pick the 4–6 most impactful developer-facing highlights for the week.
 
             Output ONLY the Markdown below (no extra text). Follow this exact structure:
 
-            ---
-            ## Project updates
+            ### {productName}
 
-            ### GitHub Copilot CLI
-
-            {(cliReleases.Count > 1 ? @"<SUMMARY: 4–6 curated themed bullets spanning ALL CLI releases and relevant changelog/blog items this week.
+            {(releases.Count > 1 ? @"<SUMMARY: 4–6 curated themed bullets spanning ALL releases this week.
              Each bullet groups related changes under one theme.
              Format: - <emoji> **<Short Category Label>** — <concise description combining related changes>
-             Example: - 🧠 **Models & context** — Adds Claude Opus 4.6 Fast (Preview) and 1M-token context support; expanded ACP model metadata.
-             Example: - 🧩 **Plugin & skill flexibility** — Uppercase names, bundled LSP configs, auto-load from `.agents/skills`, and comma-separated tool lists.>
+             Example: - 🧠 **Models & context** — Adds Claude Opus 4.6 Fast (Preview) and 1M-token context support.>
 
             " : "")}## Releases
 
@@ -285,34 +324,13 @@ public class NewsletterService
             - Combined thematic bullet covering multiple related changes
             - Another thematic bullet (e.g., "Terminal UX improvements" covering 10+ individual changes)
 
-            Release notes: [Releases - github/copilot-cli](https://github.com/github/copilot-cli/releases)
-
-            --
-
-            ### GitHub Copilot SDK
-
-            {(sdkReleases.Count > 1 ? @"<SUMMARY: 4–6 curated themed bullets spanning ALL SDK releases and relevant changelog/blog items this week.
-             Each bullet groups related changes under one theme.
-             Format: - <emoji> **<Short Category Label>** — <concise description combining related changes>
-             Example: - ♾️ **Infinite sessions** — Long-running conversations that automatically compact context so sessions never hit token limits.
-             Example: - 🪝 **Hooks & user input** — Extensible lifecycle hooks and interactive user-input flows across all SDK languages.>
-
-            " : "")}## Releases
-
-            <one sub-section per version with MAXIMUM 6 bullets (ideally 3-5), highly condensed thematic summaries>
-            ### vX.X.X (YYYY-MM-DD)
-
-            - Combined thematic bullet covering multiple related changes
-
-            Release notes: [Releases - github/copilot-sdk](https://github.com/github/copilot-sdk/releases)
-            --
+            Release notes: [Releases - github/{repoName}](https://github.com/github/{repoName}/releases)
 
             Here is the raw source material for this week. Summarize from it — do not copy it verbatim:
 
             """);
 
-        AppendReleases(sb, "GitHub Copilot CLI release notes", cliReleases);
-        AppendReleases(sb, "GitHub Copilot SDK release notes", sdkReleases);
+        AppendReleases(sb, $"{productName} release notes", releases);
 
         return sb.ToString();
     }
@@ -352,6 +370,13 @@ public class NewsletterService
             
             Most of these entries will NOT be relevant to CLI/SDK users. Filter aggressively.
             If nothing is relevant, return an empty string (no section header).
+            
+            CRITICAL OUTPUT REQUIREMENT:
+            - Output ONLY the final newsletter Markdown
+            - Do NOT include ANY meta-commentary or preamble
+            - NEVER write phrases like "Based on my review", "Here's the content", "Here are the highlights", etc.
+            - Start DIRECTLY with "---" or return empty string if nothing is relevant
+            - You are generating the final newsletter content, not describing what you're doing
             
             Examples of RELEVANT items:
             - "GPT-5.3-Codex now available in GitHub Copilot CLI"
@@ -431,3 +456,4 @@ public class NewsletterService
         sb.AppendLine();
     }
 }
+
