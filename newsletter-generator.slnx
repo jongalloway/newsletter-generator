@@ -1,5 +1,5 @@
 <Solution>
-  <Folder Name="src">
+  <Folder Name="/src/">
     <Project Path="src\NewsletterGenerator\NewsletterGenerator.csproj" />
   </Folder>
   <Properties>
