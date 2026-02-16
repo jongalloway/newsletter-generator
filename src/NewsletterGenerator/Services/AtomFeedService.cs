@@ -11,14 +11,15 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
     private readonly HttpClient _http = httpClient ?? new HttpClient();
 
     /// <summary>
-    /// Fetches any Atom or RSS 2.0 feed and returns entries within <paramref name="daysBack"/> days.
+    /// Fetches any Atom or RSS 2.0 feed and returns entries within the specified date range.
     /// Optionally filters by category keyword match (case-insensitive substring).
     /// For large blog post feeds, set <paramref name="preferShortSummary"/> = true to use the
     /// short description rather than the full article body.
     /// </summary>
     public async Task<List<ReleaseEntry>> FetchFeedAsync(
         string feedUrl,
-        int daysBack = 7,
+        DateTimeOffset startDate,
+        DateTimeOffset endDate,
         IEnumerable<string>? categoryKeywords = null,
         bool preferShortSummary = false,
         int maxContentChars = 0)
@@ -30,7 +31,6 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
         using var xmlReader = XmlReader.Create(stringReader);
         var feed = SyndicationFeed.Load(xmlReader);
 
-        var cutoff = DateTimeOffset.UtcNow.AddDays(-daysBack);
         var keywords = categoryKeywords?
             .Select(k => k.ToLowerInvariant())
             .ToList();
@@ -44,7 +44,7 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
                 ? item.PublishDate
                 : item.LastUpdatedTime;
 
-            if (pubDate < cutoff)
+            if (pubDate < startDate || pubDate > endDate)
                 continue;
 
             // Optional: filter by category label
@@ -177,12 +177,23 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
         RegexOptions.IgnoreCase)]
     private static partial Regex ReLowValueLine();
 
+    // ── GitHub attribution filter ─────────────────────────────────────────────
+    // Removes "by @username in #123" from the end of lines
+
+    [GeneratedRegex(@"\s+by\s+@\w+\s+in\s+#\d+\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex ReGitHubAttribution();
+
     private static string FilterReleaseText(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return text;
 
+        // First remove GitHub attributions from each line
+        var lines = text.Split('\n')
+            .Select(line => ReGitHubAttribution().Replace(line, "").TrimEnd());
+
+        // Then filter out low-value lines
         return string.Join('\n',
-            text.Split('\n').Where(line => !ReLowValueLine().IsMatch(line))
+            lines.Where(line => !ReLowValueLine().IsMatch(line))
         ).Trim();
     }
 }
