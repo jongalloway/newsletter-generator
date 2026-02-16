@@ -7,10 +7,12 @@ namespace NewsletterGenerator.Services;
 public class CacheService
 {
     private readonly string _cacheDir;
+    private readonly bool _forceRefresh;
 
-    public CacheService(string? cacheDirectory = null)
+    public CacheService(string? cacheDirectory = null, bool forceRefresh = false)
     {
         _cacheDir = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), ".cache");
+        _forceRefresh = forceRefresh;
         Directory.CreateDirectory(_cacheDir);
     }
 
@@ -28,6 +30,9 @@ public class CacheService
     /// </summary>
     public async Task<string?> TryGetCachedAsync(string cacheKey, string sourceHash)
     {
+        if (_forceRefresh)
+            return null;
+
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         if (!File.Exists(cacheFile))
