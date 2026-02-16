@@ -1,4 +1,3 @@
-using System.Text;
 using GitHub.Copilot.SDK;
 using NewsletterGenerator.Models;
 using Spectre.Console;

@@ -1,4 +1,3 @@
-using System.Text;
 using NewsletterGenerator.Services;
 using Spectre.Console;
 
@@ -137,7 +136,11 @@ await AnsiConsole.Status()
 static string CountCell(int n) => n == 0 ? "[dim]0[/]" : $"[green]{n}[/]";
 static string ItemsCell(IEnumerable<NewsletterGenerator.Models.ReleaseEntry> entries, int max = 3)
 {
-    var titles = entries.Take(max).Select(e => $"[white]{Markup.Escape(e.Version.Length > 40 ? e.Version[..40] + "…" : e.Version)}[/]");
+    var titles = entries.Take(max).Select(e => 
+    {
+        var displayVersion = e.Version.Length > 40 ? e.Version[..40] + "…" : e.Version;
+        return $"[white]{Markup.Escape(displayVersion)}[/]";
+    });
     var list = string.Join(", ", titles);
     return list.Length == 0 ? "[dim]none[/]" : list;
 }
@@ -147,12 +150,11 @@ var table = new Table()
     .BorderColor(Color.Grey)
     .AddColumn(new TableColumn("[bold]Source[/]").LeftAligned())
     .AddColumn(new TableColumn("[bold]Items[/]").Centered())
-    .AddColumn(new TableColumn("[bold]Recent entries[/]").LeftAligned());
-
-table.AddRow("[cornflowerblue]Copilot CLI releases[/]", CountCell(cliReleases.Count), ItemsCell(cliReleases));
-table.AddRow("[cornflowerblue]Copilot SDK releases[/]", CountCell(sdkReleases.Count), ItemsCell(sdkReleases));
-table.AddRow("[cornflowerblue]Changelog (Copilot)[/]", CountCell(changelogEntries.Count), ItemsCell(changelogEntries));
-table.AddRow("[cornflowerblue]Blog (Copilot/CLI)[/]", CountCell(blogEntries.Count), ItemsCell(blogEntries));
+    .AddColumn(new TableColumn("[bold]Recent entries[/]").LeftAligned())
+    .AddRow("[cornflowerblue]Copilot CLI releases[/]", CountCell(cliReleases.Count), ItemsCell(cliReleases))
+    .AddRow("[cornflowerblue]Copilot SDK releases[/]", CountCell(sdkReleases.Count), ItemsCell(sdkReleases))
+    .AddRow("[cornflowerblue]Changelog (Copilot)[/]", CountCell(changelogEntries.Count), ItemsCell(changelogEntries))
+    .AddRow("[cornflowerblue]Blog (Copilot/CLI)[/]", CountCell(blogEntries.Count), ItemsCell(blogEntries));
 
 AnsiConsole.Write(table);
 AnsiConsole.WriteLine();
