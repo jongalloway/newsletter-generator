@@ -1,20 +1,15 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace NewsletterGenerator.Services;
 
-public class CacheService
+public class CacheService(string? cacheDirectory = null, bool forceRefresh = false)
 {
-    private readonly string _cacheDir;
-    private readonly bool _forceRefresh;
+    private readonly string _cacheDir = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), ".cache");
+    private readonly bool _forceRefresh = forceRefresh;
 
-    public CacheService(string? cacheDirectory = null, bool forceRefresh = false)
-    {
-        _cacheDir = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), ".cache");
-        _forceRefresh = forceRefresh;
-        Directory.CreateDirectory(_cacheDir);
-    }
+    // Ensure directory exists on first use
+    private void EnsureCacheDirectory() => Directory.CreateDirectory(_cacheDir);
 
     /// <summary>
     /// Gets a hash of the content for cache key comparison
@@ -33,6 +28,7 @@ public class CacheService
         if (_forceRefresh)
             return null;
 
+        EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         if (!File.Exists(cacheFile))
@@ -59,6 +55,7 @@ public class CacheService
     /// </summary>
     public async Task SaveCacheAsync(string cacheKey, string content, string sourceHash)
     {
+        EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         var cached = new CachedItem
