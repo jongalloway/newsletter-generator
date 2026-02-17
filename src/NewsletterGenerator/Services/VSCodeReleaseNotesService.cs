@@ -1,12 +1,13 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using NewsletterGenerator.Models;
 
 namespace NewsletterGenerator.Services;
 
-public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
+public partial class VSCodeReleaseNotesService
 {
-    private readonly HttpClient _http = httpClient ?? new HttpClient();
+    private readonly HttpClient _http;
 
     private const string RawGitHubBaseUrl = "https://raw.githubusercontent.com/microsoft/vscode-docs/refs/heads/main/release-notes/";
     private const string InsidersRedirectUrl = "https://aka.ms/vscode/updates/insiders";
@@ -18,12 +19,19 @@ public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
     private const int MaxSentenceEndIndex = 100;
     private const int TruncatedTitleLength = 77;
 
+    public VSCodeReleaseNotesService(HttpClient? httpClient = null)
+    {
+        _http = httpClient ?? new HttpClient();
+        if (!_http.DefaultRequestHeaders.UserAgent.Any())
+        {
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
+        }
+    }
+
     public async Task<VSCodeReleaseNotes?> GetReleaseNotesForDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate)
     {
         if (startDate > endDate)
             (startDate, endDate) = (endDate, startDate);
-
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
 
         var endUrls = await GetCandidateMarkdownUrlsAsync(endDate.Date);
         var startUrls = await GetCandidateMarkdownUrlsAsync(startDate.Date);
@@ -62,9 +70,10 @@ public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
                         allFeatures.Add(feature);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Try next candidate
+                Debug.WriteLine($"[VSCodeReleaseNotesService] Failed to fetch/parse {url}: {ex.Message}");
             }
         }
 
@@ -91,6 +100,9 @@ public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
 
     [GeneratedRegex(@"\[([^\]]*)\]\([^\)]*\)")]
     private static partial Regex MarkdownLinkStripPattern();
+
+    [GeneratedRegex(@"\s*#\d+\s*$")]
+    private static partial Regex TrailingIssueNumberPattern();
 
     private static bool ValidateFrontMatter(string markdown)
     {
@@ -187,7 +199,7 @@ public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
         var link = linkMatch.Success ? linkMatch.Groups[1].Value : null;
 
         var cleanText = MarkdownLinkStripPattern().Replace(rawText, "$1").Trim();
-        cleanText = Regex.Replace(cleanText, @"\s*#\d+\s*$", "").Trim();
+        cleanText = TrailingIssueNumberPattern().Replace(cleanText, "").Trim();
 
         if (string.IsNullOrWhiteSpace(cleanText) || cleanText.Length < MinBulletLength)
             return;
@@ -238,8 +250,9 @@ public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
             _resolvedVersionNumber = int.Parse(match.Groups[1].Value);
             return _resolvedVersionNumber;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[VSCodeReleaseNotesService] Failed to resolve current version: {ex.Message}");
             return null;
         }
     }
@@ -298,8 +311,9 @@ public partial class VSCodeReleaseNotesService(HttpClient? httpClient = null)
             var monthNumber = DateTime.ParseExact(month, "MMMM", CultureInfo.InvariantCulture).Month;
             return new DateTime(year, monthNumber, day);
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[VSCodeReleaseNotesService] Failed to parse date from match: {ex.Message}");
             return null;
         }
     }

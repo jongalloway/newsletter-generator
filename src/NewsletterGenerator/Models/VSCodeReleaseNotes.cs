@@ -8,18 +8,21 @@ public record VSCodeFeature(
     string Category,
     string? Link);
 
-public record VSCodeReleaseNotes(
+public partial record VSCodeReleaseNotes(
     DateTime Date,
     List<VSCodeFeature> Features,
     string VersionUrl)
 {
     private const string WebsiteBaseUrl = "https://code.visualstudio.com/updates/";
 
+    [GeneratedRegex(@"(v1_\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex WebsiteUrlVersionPattern();
+
     public string WebsiteUrl
     {
         get
         {
-            var match = Regex.Match(VersionUrl, @"(v1_\d+)", RegexOptions.IgnoreCase);
+            var match = WebsiteUrlVersionPattern().Match(VersionUrl);
             return match.Success
                 ? $"{WebsiteBaseUrl}{match.Groups[1].Value}"
                 : VersionUrl;
