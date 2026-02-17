@@ -93,16 +93,11 @@ dotnet run --model gpt-4.1
 Generated newsletters are saved to:
 
 ```
-src/NewsletterGenerator/output/newsletter-YYYY-MM-DD.md
-src/NewsletterGenerator/output/newsletter-vscode-YYYY-MM-DD.md
+src/NewsletterGenerator/output/newsletter-copilot-cli-sdk-YYYY-MM-DD.md
+src/NewsletterGenerator/output/newsletter-vscode-insiders-YYYY-MM-DD.md
 ```
 
-The filename uses the end date of the coverage period.
-
-Output files now include the selected newsletter name:
-
-- `newsletter-copilot-cli-sdk-YYYY-MM-DD.md`
-- `newsletter-vscode-insiders-YYYY-MM-DD.md`
+The filename uses the end date of the coverage period and includes the newsletter slug.
 
 After each generation run, the app prompts whether to start again from the beginning (new newsletter/model/options selection).
 
