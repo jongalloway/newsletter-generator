@@ -11,13 +11,14 @@ public class NewsletterService
         string releaseSummaryBullets,
         DateTimeOffset weekStart,
         DateTimeOffset weekEnd,
-        CacheService cache)
+        CacheService cache,
+        string? model = null)
     {
         if (string.IsNullOrEmpty(newsSection) && string.IsNullOrEmpty(releaseSummaryBullets))
             return "This week brings updates to GitHub Copilot CLI & SDK.";
 
         // Check cache
-        var sourceData = $"{newsSection}|||{releaseSummaryBullets}";
+        var sourceData = $"{newsSection}|||{releaseSummaryBullets}|||{model}";
         var sourceHash = CacheService.GetContentHash(sourceData);
         var cached = await cache.TryGetCachedAsync("welcome-summary", sourceHash);
         if (cached != null)
@@ -32,6 +33,7 @@ public class NewsletterService
 
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
+            Model = model,
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -91,13 +93,14 @@ public class NewsletterService
         List<ReleaseEntry> blogEntries,
         DateTimeOffset weekStart,
         DateTimeOffset weekEnd,
-        CacheService cache)
+        CacheService cache,
+        string? model = null)
     {
         if (changelogEntries.Count == 0 && blogEntries.Count == 0)
             return string.Empty;
 
         // Check cache
-        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { changelogEntries, blogEntries });
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { changelogEntries, blogEntries, model });
         var sourceHash = CacheService.GetContentHash(sourceData);
         var cached = await cache.TryGetCachedAsync("news-announcements", sourceHash);
         if (cached != null)
@@ -112,6 +115,7 @@ public class NewsletterService
 
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
+            Model = model,
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -170,10 +174,11 @@ public class NewsletterService
         List<ReleaseEntry> releases,
         DateTimeOffset weekStart,
         DateTimeOffset weekEnd,
-        CacheService cache)
+        CacheService cache,
+        string? model = null)
     {
         // Check cache first
-        var sourceData = System.Text.Json.JsonSerializer.Serialize(releases);
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { releases, model });
         var sourceHash = CacheService.GetContentHash(sourceData);
         var cacheKey = $"{productName.Replace(" ", "-").ToLower()}-releases";
         
@@ -190,6 +195,7 @@ public class NewsletterService
 
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
+            Model = model,
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -233,11 +239,12 @@ public class NewsletterService
         List<ReleaseEntry> sdkReleases,
         DateTimeOffset weekStart,
         DateTimeOffset weekEnd,
-        CacheService cache)
+        CacheService cache,
+        string? model = null)
     {
         // Generate CLI and SDK summaries separately (with caching)
-        var cliSummary = await GenerateProductReleaseAsync("GitHub Copilot CLI", cliReleases, weekStart, weekEnd, cache);
-        var sdkSummary = await GenerateProductReleaseAsync("GitHub Copilot SDK", sdkReleases, weekStart, weekEnd, cache);
+        var cliSummary = await GenerateProductReleaseAsync("GitHub Copilot CLI", cliReleases, weekStart, weekEnd, cache, model);
+        var sdkSummary = await GenerateProductReleaseAsync("GitHub Copilot SDK", sdkReleases, weekStart, weekEnd, cache, model);
         
         // Combine into final section
         var sb = new StringBuilder();
@@ -250,6 +257,116 @@ public class NewsletterService
         sb.AppendLine();
         sb.Append(sdkSummary);
         
+        return sb.ToString();
+    }
+
+    public async Task<string> GenerateVsCodeNewsletterAsync(
+        VSCodeReleaseNotes releaseNotes,
+        List<ReleaseEntry> vscodeBlogEntries,
+        List<ReleaseEntry> githubChangelogEntries,
+        List<ReleaseEntry> githubBlogEntries,
+        DateTimeOffset weekStart,
+        DateTimeOffset weekEnd,
+        CacheService cache,
+        string? model = null)
+    {
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            releaseNotes.Date,
+            releaseNotes.VersionUrl,
+            releaseNotes.WebsiteUrl,
+            releaseNotes.Features,
+            vscodeBlogEntries,
+            githubChangelogEntries,
+            githubBlogEntries,
+            model
+        });
+
+        var sourceHash = CacheService.GetContentHash(sourceData);
+        var cached = await cache.TryGetCachedAsync("vscode-newsletter", sourceHash);
+        if (cached != null)
+        {
+            AnsiConsole.MarkupLine("[dim]Using cached VS Code newsletter[/]");
+            return cached;
+        }
+
+        AnsiConsole.MarkupLine("[grey]Generating VS Code newsletter...[/]");
+        await using var client = new CopilotClient();
+        await client.StartAsync();
+
+        await using var session = await client.CreateSessionAsync(new SessionConfig
+        {
+            Model = model,
+            SystemMessage = new SystemMessageConfig
+            {
+                Mode = SystemMessageMode.Replace,
+                Content = """
+                    You are a technical newsletter editor writing for an internal Microsoft developer audience.
+                    Your job is to summarize weekly VS Code Insiders updates in a concise, factual tone.
+
+                    TONE GUIDELINES:
+                    - Professional and informative, not promotional
+                    - No hype or hyperbole
+                    - Focus on practical developer impact
+
+                    OUTPUT REQUIREMENTS:
+                    - Output ONLY final newsletter Markdown
+                    - No preamble, no meta-commentary, no code fences
+                    - Use this exact structure:
+
+                    Welcome
+                    --------
+
+                    <2-3 sentence factual intro paragraph>
+
+                    * * * * *
+
+                    ---
+                    ## Project updates
+
+                    ### VS Code Insiders
+
+                    - 4-8 concise bullets grouped by themes
+
+                    Release notes: [VS Code Insiders](URL)
+                    """
+            }
+        });
+
+        var featureLines = string.Join('\n', releaseNotes.Features.Select(f =>
+            $"- [{f.Category}] {f.Description}{(string.IsNullOrWhiteSpace(f.Link) ? string.Empty : $" ({f.Link})")}"));
+
+        var prompt = $"""
+            Generate a weekly VS Code Insiders newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
+
+            Source URL for release notes page: {releaseNotes.WebsiteUrl}
+
+            Curate the most important developer-facing updates from this source list.
+            Combine related items into thematic bullets; avoid listing every tiny change.
+
+            Source features:
+            {featureLines}
+
+            Additional weekly sources:
+            {BuildVsCodeAdditionalSources(vscodeBlogEntries, githubChangelogEntries, githubBlogEntries)}
+
+            Generate ONLY the final Markdown newsletter content.
+            """;
+
+        var result = await SendPromptAsync(session, prompt);
+        await cache.SaveCacheAsync("vscode-newsletter", result, sourceHash);
+        return result;
+    }
+
+    private static string BuildVsCodeAdditionalSources(
+        List<ReleaseEntry> vscodeBlogEntries,
+        List<ReleaseEntry> githubChangelogEntries,
+        List<ReleaseEntry> githubBlogEntries)
+    {
+        var sb = new StringBuilder();
+        AppendBlogEntries(sb, "VS Code Blog (code.visualstudio.com/feed.xml)", vscodeBlogEntries);
+        AppendBlogEntries(sb, "GitHub Changelog entries mentioning VS Code", githubChangelogEntries);
+        AppendBlogEntries(sb, "GitHub Blog posts mentioning VS Code", githubBlogEntries);
         return sb.ToString();
     }
 

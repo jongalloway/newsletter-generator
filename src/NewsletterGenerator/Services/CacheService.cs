@@ -3,9 +3,10 @@ using System.Text.Json;
 
 namespace NewsletterGenerator.Services;
 
-public class CacheService(string? cacheDirectory = null)
+public class CacheService(string? cacheDirectory = null, bool forceRefresh = false)
 {
     private readonly string _cacheDir = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), ".cache");
+    private readonly bool _forceRefresh = forceRefresh;
 
     // Ensure directory exists on first use
     private void EnsureCacheDirectory() => Directory.CreateDirectory(_cacheDir);
@@ -24,6 +25,9 @@ public class CacheService(string? cacheDirectory = null)
     /// </summary>
     public async Task<string?> TryGetCachedAsync(string cacheKey, string sourceHash)
     {
+        if (_forceRefresh)
+            return null;
+
         EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
