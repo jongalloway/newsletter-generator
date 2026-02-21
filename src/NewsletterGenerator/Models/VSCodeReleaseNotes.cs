@@ -9,7 +9,7 @@ public record VSCodeFeature(
     string? Link);
 
 public partial record VSCodeReleaseNotes(
-    DateTime Date,
+    DateOnly Date,
     List<VSCodeFeature> Features,
     string VersionUrl)
 {

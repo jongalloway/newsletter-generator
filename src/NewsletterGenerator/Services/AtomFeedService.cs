@@ -18,8 +18,8 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
     /// </summary>
     public async Task<List<ReleaseEntry>> FetchFeedAsync(
         string feedUrl,
-        DateTimeOffset startDate,
-        DateTimeOffset endDate,
+        DateOnly startDate,
+        DateOnly endDate,
         IEnumerable<string>? categoryKeywords = null,
         bool preferShortSummary = false,
         int maxContentChars = 0)
@@ -40,9 +40,12 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
         foreach (var item in feed.Items)
         {
             // Pick the best available date: PublishDate (RSS) or LastUpdatedTime (Atom)
-            var pubDate = item.PublishDate != DateTimeOffset.MinValue
+            // Convert to local DateOnly — releases happen during working hours, time doesn't matter
+            var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue
                 ? item.PublishDate
                 : item.LastUpdatedTime;
+
+            var pubDate = DateOnly.FromDateTime(pubDateOffset.LocalDateTime);
 
             if (pubDate < startDate || pubDate > endDate)
                 continue;
@@ -73,8 +76,7 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
                 Version: item.Title?.Text?.Trim() ?? "",
                 PublishedAt: pubDate,
                 PlainText: plainText,
-                Url: url
-            ));
+                Url: url));
         }
 
         return entries

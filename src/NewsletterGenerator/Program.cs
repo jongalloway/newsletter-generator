@@ -82,9 +82,6 @@ do
     weekEndDate = today;
     weekStartDate = today.AddDays(-selectedDaysBack);
 
-    var weekStart = weekStartDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-    var weekEnd = weekEndDate.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc);
-
     var daySpan = weekEndDate.DayNumber - weekStartDate.DayNumber + 1;
     AnsiConsole.MarkupLine($"[dim]Date range:[/] [white]{weekStartDate:yyyy-MM-dd}[/] [dim]→[/] [white]{weekEndDate:yyyy-MM-dd}[/] [dim]({daySpan} days)[/]");
     AnsiConsole.WriteLine();
@@ -94,11 +91,11 @@ do
     string? content;
     if (selectedNewsletter == NewsletterType.VSCode)
     {
-        content = await GenerateVsCodeNewsletterAsync(weekStart, weekEnd, cache, selectedModel);
+        content = await GenerateVsCodeNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel);
     }
     else
     {
-        content = await GenerateCopilotNewsletterAsync(weekStart, weekEnd, cache, selectedModel);
+        content = await GenerateCopilotNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel);
     }
 
     if (!string.IsNullOrWhiteSpace(content))
@@ -262,7 +259,7 @@ static async Task<List<ModelInfo>?> PrintCopilotStartupStatusAsync()
     bool isAuthenticated;
     string sdkStatus;
     List<ModelInfo>? models = null;
-    
+
     try
     {
         await using var client = new CopilotClient();
@@ -297,7 +294,7 @@ static async Task<List<ModelInfo>?> PrintCopilotStartupStatusAsync()
 
     AnsiConsole.Write(statusTable);
     AnsiConsole.WriteLine();
-    
+
     return models;
 }
 
@@ -350,11 +347,11 @@ static async Task<(bool success, string standardOutput, string standardError, in
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
-        
+
         var standardOutput = (await stdoutTask).Trim();
         var standardError = (await stderrTask).Trim();
         var exitCode = process.ExitCode;
-        
+
         return (true, standardOutput, standardError, exitCode);
     }
     catch
@@ -439,8 +436,8 @@ static async Task<string> SelectModelAsync(string? modelArg, List<ModelInfo>? ca
 }
 
 static async Task<string?> GenerateVsCodeNewsletterAsync(
-    DateTimeOffset weekStart,
-    DateTimeOffset weekEnd,
+    DateOnly weekStart,
+    DateOnly weekEnd,
     CacheService cache,
     string selectedModel)
 {
@@ -570,8 +567,8 @@ static async Task<string?> GenerateVsCodeNewsletterAsync(
 }
 
 static async Task<string?> GenerateCopilotNewsletterAsync(
-    DateTimeOffset weekStart,
-    DateTimeOffset weekEnd,
+    DateOnly weekStart,
+    DateOnly weekEnd,
     CacheService cache,
     string selectedModel)
 {

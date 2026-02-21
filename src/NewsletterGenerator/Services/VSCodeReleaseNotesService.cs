@@ -28,13 +28,13 @@ public partial class VSCodeReleaseNotesService
         }
     }
 
-    public async Task<VSCodeReleaseNotes?> GetReleaseNotesForDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate)
+    public async Task<VSCodeReleaseNotes?> GetReleaseNotesForDateRangeAsync(DateOnly startDate, DateOnly endDate)
     {
         if (startDate > endDate)
             (startDate, endDate) = (endDate, startDate);
 
-        var endUrls = await GetCandidateMarkdownUrlsAsync(endDate.Date);
-        var startUrls = await GetCandidateMarkdownUrlsAsync(startDate.Date);
+        var endUrls = await GetCandidateMarkdownUrlsAsync(endDate);
+        var startUrls = await GetCandidateMarkdownUrlsAsync(startDate);
         var candidateUrls = endUrls
             .Concat(startUrls)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -54,7 +54,7 @@ public partial class VSCodeReleaseNotesService
 
                 var sections = ParseMarkdownSections(markdown, endDate.Year);
                 var features = sections
-                    .Where(s => s.Date.Date >= startDate.Date && s.Date.Date <= endDate.Date)
+                    .Where(s => s.Date >= startDate && s.Date <= endDate)
                     .SelectMany(s => s.Features)
                     .ToList();
 
@@ -81,7 +81,7 @@ public partial class VSCodeReleaseNotesService
             return null;
 
         return new VSCodeReleaseNotes(
-            Date: endDate.Date,
+            Date: endDate,
             Features: allFeatures,
             VersionUrl: versionUrl ?? candidateUrls.First());
     }
@@ -211,7 +211,7 @@ public partial class VSCodeReleaseNotesService
             Link: link));
     }
 
-    private async Task<IReadOnlyList<string>> GetCandidateMarkdownUrlsAsync(DateTime targetDate)
+    private async Task<IReadOnlyList<string>> GetCandidateMarkdownUrlsAsync(DateOnly targetDate)
     {
         var currentVersion = await ResolveCurrentVersionAsync();
 
@@ -257,7 +257,7 @@ public partial class VSCodeReleaseNotesService
         }
     }
 
-    private static IReadOnlyList<string> GetCandidateMarkdownUrlsByDate(DateTime targetDate)
+    private static IReadOnlyList<string> GetCandidateMarkdownUrlsByDate(DateOnly targetDate)
     {
         var releaseMonth = GetReleaseMonth(targetDate);
         var nextMonth = releaseMonth.AddMonths(1);
@@ -271,9 +271,9 @@ public partial class VSCodeReleaseNotesService
         return urls.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    private static string GetMarkdownUrlForMonth(DateTime releaseMonth)
+    private static string GetMarkdownUrlForMonth(DateOnly releaseMonth)
     {
-        var referenceDate = new DateTime(2026, 1, 1);
+        var referenceDate = new DateOnly(2026, 1, 1);
         const int referenceVersion = 109;
 
         var monthsDiff = ((releaseMonth.Year - referenceDate.Year) * 12) + releaseMonth.Month - referenceDate.Month;
@@ -282,26 +282,26 @@ public partial class VSCodeReleaseNotesService
         return $"{RawGitHubBaseUrl}v1_{version}.md";
     }
 
-    private static DateTime GetReleaseMonth(DateTime targetDate)
+    private static DateOnly GetReleaseMonth(DateOnly targetDate)
     {
         var firstThursday = GetFirstThursdayOfMonth(targetDate.Year, targetDate.Month);
-        if (targetDate.Date < firstThursday.Date)
+        if (targetDate < firstThursday)
         {
             var previousMonth = targetDate.AddMonths(-1);
-            return new DateTime(previousMonth.Year, previousMonth.Month, 1);
+            return new DateOnly(previousMonth.Year, previousMonth.Month, 1);
         }
 
-        return new DateTime(targetDate.Year, targetDate.Month, 1);
+        return new DateOnly(targetDate.Year, targetDate.Month, 1);
     }
 
-    private static DateTime GetFirstThursdayOfMonth(int year, int month)
+    private static DateOnly GetFirstThursdayOfMonth(int year, int month)
     {
-        var firstDay = new DateTime(year, month, 1);
+        var firstDay = new DateOnly(year, month, 1);
         var offset = ((int)DayOfWeek.Thursday - (int)firstDay.DayOfWeek + 7) % 7;
         return firstDay.AddDays(offset);
     }
 
-    private static DateTime? ParseDateFromMatch(Match match, int defaultYear)
+    private static DateOnly? ParseDateFromMatch(Match match, int defaultYear)
     {
         try
         {
@@ -309,7 +309,7 @@ public partial class VSCodeReleaseNotesService
             var day = int.Parse(match.Groups[2].Value);
             var year = match.Groups[3].Success ? int.Parse(match.Groups[3].Value) : defaultYear;
             var monthNumber = DateTime.ParseExact(month, "MMMM", CultureInfo.InvariantCulture).Month;
-            return new DateTime(year, monthNumber, day);
+            return new DateOnly(year, monthNumber, day);
         }
         catch (Exception ex)
         {
@@ -347,7 +347,7 @@ public partial class VSCodeReleaseNotesService
 
     private sealed class MarkdownDateSection
     {
-        public DateTime Date { get; init; }
+        public DateOnly Date { get; init; }
         public List<VSCodeFeature> Features { get; } = [];
     }
 }

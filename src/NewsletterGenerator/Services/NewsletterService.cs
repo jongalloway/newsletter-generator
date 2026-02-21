@@ -9,8 +9,8 @@ public class NewsletterService
     public async Task<string> GenerateWelcomeSummaryAsync(
         string newsSection,
         string releaseSummaryBullets,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd,
+        DateOnly weekStart,
+        DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
@@ -81,18 +81,18 @@ public class NewsletterService
             """;
 
         var result = await SendPromptAsync(session, prompt);
-        
+
         // Cache the result
         await cache.SaveCacheAsync("welcome-summary", result, sourceHash);
-        
+
         return result;
     }
 
     public async Task<string> GenerateNewsAndAnnouncementsAsync(
         List<ReleaseEntry> changelogEntries,
         List<ReleaseEntry> blogEntries,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd,
+        DateOnly weekStart,
+        DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
@@ -162,26 +162,31 @@ public class NewsletterService
 
         var prompt = BuildNewsPrompt(changelogEntries, blogEntries, weekStart, weekEnd);
         var result = await SendPromptAsync(session, prompt);
-        
+
         // Cache the result
         await cache.SaveCacheAsync("news-announcements", result, sourceHash);
-        
+
         return result;
     }
 
     public async Task<string> GenerateProductReleaseAsync(
         string productName,
         List<ReleaseEntry> releases,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd,
+        DateOnly weekStart,
+        DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
+        if (releases.Count == 0)
+        {
+            return $"### {productName}\n\n_No new releases this week._\n";
+        }
+
         // Check cache first
         var sourceData = System.Text.Json.JsonSerializer.Serialize(new { releases, model });
         var sourceHash = CacheService.GetContentHash(sourceData);
         var cacheKey = $"{productName.Replace(" ", "-").ToLower()}-releases";
-        
+
         var cached = await cache.TryGetCachedAsync(cacheKey, sourceHash);
         if (cached != null)
         {
@@ -227,25 +232,25 @@ public class NewsletterService
 
         var prompt = BuildProductPrompt(productName, releases, weekStart, weekEnd);
         var result = await SendPromptAsync(session, prompt);
-        
+
         // Cache the result
         await cache.SaveCacheAsync(cacheKey, result, sourceHash);
-        
+
         return result;
     }
 
     public async Task<string> GenerateReleaseSectionAsync(
         List<ReleaseEntry> cliReleases,
         List<ReleaseEntry> sdkReleases,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd,
+        DateOnly weekStart,
+        DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
         // Generate CLI and SDK summaries separately (with caching)
         var cliSummary = await GenerateProductReleaseAsync("GitHub Copilot CLI", cliReleases, weekStart, weekEnd, cache, model);
         var sdkSummary = await GenerateProductReleaseAsync("GitHub Copilot SDK", sdkReleases, weekStart, weekEnd, cache, model);
-        
+
         // Combine into final section
         var sb = new StringBuilder();
         sb.AppendLine("---");
@@ -256,7 +261,7 @@ public class NewsletterService
         sb.AppendLine("---");
         sb.AppendLine();
         sb.Append(sdkSummary);
-        
+
         return sb.ToString();
     }
 
@@ -265,8 +270,8 @@ public class NewsletterService
         List<ReleaseEntry> vscodeBlogEntries,
         List<ReleaseEntry> githubChangelogEntries,
         List<ReleaseEntry> githubBlogEntries,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd,
+        DateOnly weekStart,
+        DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
@@ -400,8 +405,8 @@ public class NewsletterService
     private static string BuildProductPrompt(
         string productName,
         List<ReleaseEntry> releases,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd)
+        DateOnly weekStart,
+        DateOnly weekEnd)
     {
         var sb = new StringBuilder();
         var repoName = productName.ToLower().Replace("github ", "").Replace(" ", "-");
@@ -454,8 +459,8 @@ public class NewsletterService
     private static string BuildNewsPrompt(
         List<ReleaseEntry> changelogEntries,
         List<ReleaseEntry> blogEntries,
-        DateTimeOffset weekStart,
-        DateTimeOffset weekEnd)
+        DateOnly weekStart,
+        DateOnly weekEnd)
     {
         var sb = new StringBuilder();
 
