@@ -100,18 +100,19 @@ do
     var cache = new CacheService(loggerFactory.CreateLogger<CacheService>(), forceRefresh: forceRefresh);
 
     string? content;
+    string title = $"{GetNewsletterLabel(selectedNewsletter)} Weekly Newsletter";
     if (selectedNewsletter == NewsletterType.VSCode)
     {
         content = await GenerateVsCodeNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
     }
     else
     {
-        content = await GenerateCopilotNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
+        (content, title) = await GenerateCopilotNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
     }
 
     if (!string.IsNullOrWhiteSpace(content))
     {
-        content = PrefixNewsletterName(content, selectedNewsletter, weekStartDate, weekEndDate, selectedModel);
+        content = PrefixNewsletterName(content, title, weekStartDate, weekEndDate, selectedModel);
         content = content.Replace('—', '-').Replace('–', '-');
 
         var repoRoot = FindRepoRoot(Directory.GetCurrentDirectory());
@@ -228,13 +229,13 @@ static string GetNewsletterSlug(NewsletterType type) => type switch
 
 static string PrefixNewsletterName(
     string content,
-    NewsletterType type,
+    string title,
     DateOnly weekStart,
     DateOnly weekEnd,
     string model)
 {
     var sb = new StringBuilder();
-    sb.AppendLine($"# {GetNewsletterLabel(type)} Weekly Newsletter");
+    sb.AppendLine($"# {title}");
     sb.AppendLine();
     sb.AppendLine($"> Coverage: {weekStart:yyyy-MM-dd} to {weekEnd:yyyy-MM-dd}");
     sb.AppendLine($"> Model: {model}");
@@ -579,13 +580,14 @@ static async Task<string?> GenerateVsCodeNewsletterAsync(
     return content;
 }
 
-static async Task<string?> GenerateCopilotNewsletterAsync(
+static async Task<(string? Content, string Title)> GenerateCopilotNewsletterAsync(
     DateOnly weekStart,
     DateOnly weekEnd,
     CacheService cache,
     string selectedModel,
     ILoggerFactory loggerFactory)
 {
+    var defaultTitle = "GitHub Copilot CLI/SDK Weekly Newsletter";
     const string CliAtomUrl = "https://github.com/github/copilot-cli/releases.atom";
     const string SdkAtomUrl = "https://github.com/github/copilot-sdk/releases.atom";
     const string ChangelogCopilotUrl = "https://github.blog/changelog/label/copilot/feed/";
@@ -664,7 +666,7 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
     {
         log.LogWarning("No items found for date range {Start} to {End}", weekStart, weekEnd);
         AnsiConsole.MarkupLine($"[yellow]⚠[/]  No items found in the date range [bold]{weekStart:yyyy-MM-dd}[/] to [bold]{weekEnd:yyyy-MM-dd}[/].");
-        return null;
+        return (null, defaultTitle);
     }
 
     log.LogInformation("Feed totals: CLI={Cli}, SDK={Sdk}, Changelog={Changelog}, Blog={Blog}",
@@ -726,6 +728,11 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
                 ctx.Status("Generating Welcome summary...");
                 welcomeSummary = await newsletterService.GenerateWelcomeSummaryAsync(
                     newsSection, releaseSummaryBullets, weekStart, weekEnd, cache, selectedModel);
+
+                ctx.Status("Generating newsletter title...");
+                var newsletterLabel = GetNewsletterLabel(NewsletterType.CopilotCliSdk);
+                defaultTitle = await newsletterService.GenerateNewsletterTitleAsync(
+                    welcomeSummary, newsletterLabel, cache, selectedModel);
             }
             catch (Exception ex)
             {
@@ -741,7 +748,7 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
     if (string.IsNullOrEmpty(releaseSection))
     {
         log.LogWarning("releaseSection is empty, returning null");
-        return null;
+        return (null, defaultTitle);
     }
 
     var contentBuilder = new StringBuilder();
@@ -764,7 +771,7 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
     }
 
     contentBuilder.Append(releaseSection);
-    return contentBuilder.ToString();
+    return (contentBuilder.ToString(), defaultTitle);
 }
 
 static string FindRepoRoot(string startDir)

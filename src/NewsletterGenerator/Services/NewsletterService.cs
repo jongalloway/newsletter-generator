@@ -96,6 +96,72 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         return result;
     }
 
+    public async Task<string> GenerateNewsletterTitleAsync(
+        string welcomeSummary,
+        string newsletterLabel,
+        CacheService cache,
+        string? model = null)
+    {
+        if (string.IsNullOrWhiteSpace(welcomeSummary))
+            return $"{newsletterLabel} Weekly Newsletter";
+
+        var sourceData = $"title|||{welcomeSummary}|||{model}";
+        var sourceHash = CacheService.GetContentHash(sourceData);
+        var cached = await cache.TryGetCachedAsync("newsletter-title", sourceHash);
+        if (cached != null)
+        {
+            logger.LogInformation("Using cached newsletter title (hash={Hash})", sourceHash[..12]);
+            AnsiConsole.MarkupLine("[dim]Using cached newsletter title[/]");
+            return cached;
+        }
+
+        logger.LogInformation("Generating newsletter title (model={Model})", model);
+        AnsiConsole.MarkupLine("[grey]Generating newsletter title...[/]");
+        await using var client = new CopilotClient();
+        await client.StartAsync();
+
+        await using var session = await client.CreateSessionAsync(new SessionConfig
+        {
+            Model = model,
+            SystemMessage = new SystemMessageConfig
+            {
+                Mode = SystemMessageMode.Replace,
+                Content = """
+                    You generate a short, descriptive title for a weekly developer newsletter.
+                    The title should highlight 2-3 of the most important items from the week.
+                    Keep it factual and specific - use actual feature/product names.
+                    """
+            }
+        });
+
+        var prompt = $"""
+            Generate a title for this week's {newsletterLabel} newsletter.
+
+            Here is the welcome summary that describes this week's highlights:
+            {welcomeSummary}
+
+            FORMAT: "{newsletterLabel} - [Highlight 1], [Highlight 2], [Highlight 3], and more!"
+
+            RULES:
+            - Pick 2-3 of the most significant items from the summary
+            - Use short, specific names (e.g., "Claude Sonnet 4.6 GA" not "new model availability")
+            - Keep the total title under 100 characters if possible
+            - Output ONLY the title text, no quotes, no markdown
+
+            EXAMPLES:
+            - {newsletterLabel} - New GPT-5.3-Codex, VS Code Integration, SDK Hooks, and more!
+            - {newsletterLabel} - Claude Sonnet 4.6 GA, Cross-Session Memory, Infinite Sessions, and more!
+            """;
+
+        var result = await SendPromptAsync(session, prompt);
+        result = result.Trim().Trim('"').Trim();
+        logger.LogInformation("Newsletter title generated: {Title}", result);
+
+        await cache.SaveCacheAsync("newsletter-title", result, sourceHash);
+
+        return result;
+    }
+
     public async Task<string> GenerateNewsAndAnnouncementsAsync(
         List<ReleaseEntry> changelogEntries,
         List<ReleaseEntry> blogEntries,
