@@ -104,7 +104,7 @@ public partial class VSCodeReleaseNotesService
     [GeneratedRegex(@"\s*#\d+\s*$")]
     private static partial Regex TrailingIssueNumberPattern();
 
-    private static bool ValidateFrontMatter(string markdown)
+    internal static bool ValidateFrontMatter(string markdown)
     {
         if (!markdown.StartsWith("---"))
             return false;
@@ -282,7 +282,7 @@ public partial class VSCodeReleaseNotesService
         return $"{RawGitHubBaseUrl}v1_{version}.md";
     }
 
-    private static DateOnly GetReleaseMonth(DateOnly targetDate)
+    internal static DateOnly GetReleaseMonth(DateOnly targetDate)
     {
         var firstThursday = GetFirstThursdayOfMonth(targetDate.Year, targetDate.Month);
         if (targetDate < firstThursday)
@@ -294,7 +294,7 @@ public partial class VSCodeReleaseNotesService
         return new DateOnly(targetDate.Year, targetDate.Month, 1);
     }
 
-    private static DateOnly GetFirstThursdayOfMonth(int year, int month)
+    internal static DateOnly GetFirstThursdayOfMonth(int year, int month)
     {
         var firstDay = new DateOnly(year, month, 1);
         var offset = ((int)DayOfWeek.Thursday - (int)firstDay.DayOfWeek + 7) % 7;
@@ -318,7 +318,7 @@ public partial class VSCodeReleaseNotesService
         }
     }
 
-    private static string TruncateTitle(string text)
+    internal static string TruncateTitle(string text)
     {
         var firstPeriod = text.IndexOf('.');
         if (firstPeriod > 0 && firstPeriod < MaxSentenceEndIndex)
@@ -327,7 +327,7 @@ public partial class VSCodeReleaseNotesService
         return text.Length > MaxTitleLength ? text[..TruncatedTitleLength] + "..." : text;
     }
 
-    private static string ExtractCategory(string headingText)
+    internal static string ExtractCategory(string headingText)
     {
         var dashIndex = headingText.IndexOf('-');
         if (dashIndex > 0 && dashIndex < headingText.Length - 2)

@@ -156,7 +156,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
     [GeneratedRegex(@"\n{3,}")]
     private static partial Regex ReBlankLines();
 
-    private static string HtmlToText(string html)
+    internal static string HtmlToText(string html)
     {
         if (string.IsNullOrWhiteSpace(html)) return string.Empty;
 
@@ -209,7 +209,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
     [GeneratedRegex(@"\s+by\s+@\w+\s+in\s+#\d+\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex ReGitHubAttribution();
 
-    private static string FilterReleaseText(string text)
+    internal static string FilterReleaseText(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return text;
 
@@ -235,7 +235,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
     /// Extracts just the version tag from an Atom feed title, stripping any
     /// trailing description (e.g., "go/v0.1.26-preview.0: Add E2E tests..." → "go/v0.1.26-preview.0").
     /// </summary>
-    private static string ExtractVersionTag(string version)
+    internal static string ExtractVersionTag(string version)
     {
         var colonIdx = version.IndexOf(':');
         return colonIdx >= 0 ? version[..colonIdx].Trim() : version.Trim();
@@ -330,7 +330,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         return fullReleases;
     }
 
-    private static string FormatLangLabel(string lang) =>
+    internal static string FormatLangLabel(string lang) =>
         lang.ToLowerInvariant() switch
         {
             "go" => "Go",
