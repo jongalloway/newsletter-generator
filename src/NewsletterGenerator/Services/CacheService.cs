@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace NewsletterGenerator.Services;
 
-public class CacheService(string? cacheDirectory = null, bool forceRefresh = false)
+public class CacheService(ILogger<CacheService> logger, string? cacheDirectory = null, bool forceRefresh = false)
 {
     private readonly string _cacheDir = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), ".cache");
     private readonly bool _forceRefresh = forceRefresh;
@@ -26,13 +27,19 @@ public class CacheService(string? cacheDirectory = null, bool forceRefresh = fal
     public async Task<string?> TryGetCachedAsync(string cacheKey, string sourceHash)
     {
         if (_forceRefresh)
+        {
+            logger.LogDebug("Cache skip (force refresh): {CacheKey}", cacheKey);
             return null;
+        }
 
         EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         if (!File.Exists(cacheFile))
+        {
+            logger.LogDebug("Cache miss (no file): {CacheKey}", cacheKey);
             return null;
+        }
 
         try
         {
@@ -40,11 +47,16 @@ public class CacheService(string? cacheDirectory = null, bool forceRefresh = fal
             var cached = JsonSerializer.Deserialize<CachedItem>(json);
 
             if (cached?.SourceHash == sourceHash)
+            {
+                logger.LogInformation("Cache hit: {CacheKey} (hash={Hash}, content={Length} chars)", cacheKey, sourceHash[..12], cached.Content.Length);
                 return cached.Content;
+            }
+
+            logger.LogDebug("Cache miss (hash mismatch): {CacheKey} expected={Expected} actual={Actual}", cacheKey, sourceHash[..12], cached?.SourceHash?[..12]);
         }
-        catch
+        catch (Exception ex)
         {
-            // Cache file corrupted or invalid, ignore
+            logger.LogWarning(ex, "Cache read failed for {CacheKey}", cacheKey);
         }
 
         return null;
@@ -55,6 +67,14 @@ public class CacheService(string? cacheDirectory = null, bool forceRefresh = fal
     /// </summary>
     public async Task SaveCacheAsync(string cacheKey, string content, string sourceHash)
     {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            logger.LogWarning("Skipping cache save for {CacheKey}: content is empty", cacheKey);
+            return;
+        }
+
+        logger.LogInformation("Saving cache: {CacheKey} (hash={Hash}, content={Length} chars)", cacheKey, sourceHash[..12], content.Length);
+
         EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 

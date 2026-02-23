@@ -2,11 +2,12 @@ using System.Net;
 using System.ServiceModel.Syndication;
 using System.Text.RegularExpressions;
 using System.Xml;
+using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 
 namespace NewsletterGenerator.Services;
 
-public partial class AtomFeedService(HttpClient? httpClient = null)
+public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient? httpClient = null)
 {
     private readonly HttpClient _http = httpClient ?? new HttpClient();
 
@@ -24,8 +25,10 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
         bool preferShortSummary = false,
         int maxContentChars = 0)
     {
+        logger.LogInformation("Fetching feed: {Url} (range {Start} to {End})", feedUrl, startDate, endDate);
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
         var xml = await _http.GetStringAsync(feedUrl);
+        logger.LogDebug("Feed response: {Length} chars", xml.Length);
 
         using var stringReader = new StringReader(xml);
         using var xmlReader = XmlReader.Create(stringReader);
@@ -36,9 +39,13 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
             .ToList();
 
         var entries = new List<ReleaseEntry>();
+        int totalItems = 0;
+        int skippedDate = 0;
+        int skippedCategory = 0;
 
         foreach (var item in feed.Items)
         {
+            totalItems++;
             // Pick the best available date: PublishDate (RSS) or LastUpdatedTime (Atom)
             // Convert to local DateOnly — releases happen during working hours, time doesn't matter
             var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue
@@ -48,7 +55,12 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
             var pubDate = DateOnly.FromDateTime(pubDateOffset.LocalDateTime);
 
             if (pubDate < startDate || pubDate > endDate)
+            {
+                logger.LogDebug("  Skipped (date {Date} outside {Start}-{End}): {Title}",
+                    pubDate, startDate, endDate, item.Title?.Text?.Trim());
+                skippedDate++;
                 continue;
+            }
 
             // Optional: filter by category label
             if (keywords is { Count: > 0 })
@@ -57,7 +69,12 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
                                .Select(c => c.Name.ToLowerInvariant())
                                .ToList();
                 if (!cats.Any(c => keywords.Any(k => c.Contains(k))))
+                {
+                    logger.LogDebug("  Skipped (category mismatch, cats=[{Categories}]): {Title}",
+                        string.Join(", ", cats), item.Title?.Text?.Trim());
+                    skippedCategory++;
                     continue;
+                }
             }
 
             var rawHtml = GetContent(item, preferShortSummary);
@@ -79,9 +96,16 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
                 Url: url));
         }
 
-        return entries
+        var result = entries
             .OrderByDescending(e => e.PublishedAt)
             .ToList();
+
+        logger.LogInformation("Feed {Url}: {Total} items in feed, {Matched} matched, {SkippedDate} skipped (date), {SkippedCat} skipped (category)",
+            feedUrl, totalItems, result.Count, skippedDate, skippedCategory);
+        foreach (var entry in result)
+            logger.LogDebug("  Entry: {Version} ({Date}, {TextLength} chars)", entry.Version, entry.PublishedAt, entry.PlainText.Length);
+
+        return result;
     }
 
     // ── Content extraction ────────────────────────────────────────────────────
@@ -198,4 +222,123 @@ public partial class AtomFeedService(HttpClient? httpClient = null)
             lines.Where(line => !ReLowValueLine().IsMatch(line))
         ).Trim();
     }
+
+    // ── Prerelease and language-prefix consolidation ───────────────────────────
+
+    [GeneratedRegex(@"^(?<base>.+?)-(?:preview|alpha|beta|rc)(?:\.\d+)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex RePrereleaseVersion();
+
+    [GeneratedRegex(@"^(?<lang>[a-zA-Z][a-zA-Z0-9._]*)/(?<version>.+)$")]
+    private static partial Regex ReLangPrefixedVersion();
+
+    /// <summary>
+    /// Extracts just the version tag from an Atom feed title, stripping any
+    /// trailing description (e.g., "go/v0.1.26-preview.0: Add E2E tests..." → "go/v0.1.26-preview.0").
+    /// </summary>
+    private static string ExtractVersionTag(string version)
+    {
+        var colonIdx = version.IndexOf(':');
+        return colonIdx >= 0 ? version[..colonIdx].Trim() : version.Trim();
+    }
+
+    /// <summary>
+    /// Consolidates language-prefixed versions (e.g., go/v0.1.25) and prereleases
+    /// (e.g., go/v0.1.25-preview.0) into their matching unprefixed full releases.
+    /// Language-specific content is annotated with the language name (e.g., "(Go)").
+    /// Orphan prereleases with content are promoted to standalone entries.
+    /// </summary>
+    public static List<ReleaseEntry> ConsolidatePrereleases(List<ReleaseEntry> releases)
+    {
+        // Categorize all entries
+        var fullReleases = new List<ReleaseEntry>();               // e.g., v0.1.25
+        var prefixedFullReleases = new List<(ReleaseEntry Entry, string Lang, string Version)>(); // e.g., go/v0.1.25
+        var prereleases = new List<(ReleaseEntry Entry, string? Lang, string BaseVersion)>();      // e.g., go/v0.1.25-preview.0
+
+        foreach (var release in releases)
+        {
+            // Strip description suffix from Atom feed titles (e.g., "go/v0.1.26-preview.0: Add E2E tests..." → "go/v0.1.26-preview.0")
+            var version = ExtractVersionTag(release.Version);
+            string? lang = null;
+
+            // Strip language prefix if present (e.g., "go/v0.1.25" → lang="go", version="v0.1.25")
+            var langMatch = ReLangPrefixedVersion().Match(version);
+            if (langMatch.Success)
+            {
+                lang = langMatch.Groups["lang"].Value;
+                version = langMatch.Groups["version"].Value;
+            }
+
+            // Check if the (possibly stripped) version is a prerelease
+            var preMatch = RePrereleaseVersion().Match(version);
+            if (preMatch.Success)
+            {
+                prereleases.Add((release, lang, preMatch.Groups["base"].Value));
+            }
+            else if (lang != null)
+            {
+                prefixedFullReleases.Add((release, lang, version));
+            }
+            else
+            {
+                fullReleases.Add(release);
+            }
+        }
+
+        // Merge prefixed full releases into unprefixed full releases (e.g., go/v0.1.25 → v0.1.25)
+        foreach (var (entry, lang, version) in prefixedFullReleases)
+        {
+            if (string.IsNullOrWhiteSpace(entry.PlainText))
+                continue; // Skip empty prefixed releases (common for Go module tags)
+
+            var fullIndex = fullReleases.FindIndex(r =>
+                string.Equals(r.Version, version, StringComparison.OrdinalIgnoreCase));
+
+            if (fullIndex >= 0)
+            {
+                var full = fullReleases[fullIndex];
+                var langLabel = FormatLangLabel(lang);
+                var mergedText = $"{full.PlainText}\n\n{langLabel} changes:\n{entry.PlainText}";
+                fullReleases[fullIndex] = full with { PlainText = mergedText };
+            }
+            // If no unprefixed match, keep as standalone (re-add to full releases)
+            else
+            {
+                fullReleases.Add(entry);
+            }
+        }
+
+        // Merge prereleases into the matching full release
+        foreach (var (prerelease, lang, baseVersion) in prereleases)
+        {
+            if (string.IsNullOrWhiteSpace(prerelease.PlainText))
+                continue;
+
+            // Try matching against unprefixed full release first
+            var fullIndex = fullReleases.FindIndex(r =>
+                string.Equals(r.Version, baseVersion, StringComparison.OrdinalIgnoreCase));
+
+            if (fullIndex >= 0)
+            {
+                var full = fullReleases[fullIndex];
+                var langNote = lang != null ? $" ({FormatLangLabel(lang)})" : "";
+                var mergedText = $"{full.PlainText}\n\nAdditional features from prerelease{langNote} ({prerelease.Version}):\n{prerelease.PlainText}";
+                fullReleases[fullIndex] = full with { PlainText = mergedText };
+            }
+            // Orphan prerelease — no matching full release, drop it
+        }
+
+        return fullReleases;
+    }
+
+    private static string FormatLangLabel(string lang) =>
+        lang.ToLowerInvariant() switch
+        {
+            "go" => "Go",
+            "python" => "Python",
+            "dotnet" or ".net" => ".NET",
+            "csharp" or "cs" => "C#",
+            "typescript" or "ts" => "TypeScript",
+            "javascript" or "js" => "JavaScript",
+            _ => lang
+        };
 }

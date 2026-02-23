@@ -1,9 +1,20 @@
 using System.Diagnostics;
 using System.Text;
 using GitHub.Copilot.SDK;
+using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;
 using Spectre.Console;
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+var logPath = Path.Combine(FindRepoRoot(Directory.GetCurrentDirectory()), "log", "newsletter-{Date}.log");
+using var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.SetMinimumLevel(LogLevel.Debug);
+    builder.AddFile(logPath, LogLevel.Debug);
+});
+var programLogger = loggerFactory.CreateLogger("Program");
+programLogger.LogInformation("Newsletter generator started");
 
 // ── Header ────────────────────────────────────────────────────────────────────
 AnsiConsole.Write(
@@ -86,16 +97,16 @@ do
     AnsiConsole.MarkupLine($"[dim]Date range:[/] [white]{weekStartDate:yyyy-MM-dd}[/] [dim]→[/] [white]{weekEndDate:yyyy-MM-dd}[/] [dim]({daySpan} days)[/]");
     AnsiConsole.WriteLine();
 
-    var cache = new CacheService(forceRefresh: forceRefresh);
+    var cache = new CacheService(loggerFactory.CreateLogger<CacheService>(), forceRefresh: forceRefresh);
 
     string? content;
     if (selectedNewsletter == NewsletterType.VSCode)
     {
-        content = await GenerateVsCodeNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel);
+        content = await GenerateVsCodeNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
     }
     else
     {
-        content = await GenerateCopilotNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel);
+        content = await GenerateCopilotNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
     }
 
     if (!string.IsNullOrWhiteSpace(content))
@@ -103,7 +114,8 @@ do
         content = PrefixNewsletterName(content, selectedNewsletter, weekStartDate, weekEndDate, selectedModel);
         content = content.Replace('—', '-').Replace('–', '-');
 
-        var outputDir = Path.Combine(Directory.GetCurrentDirectory(), "output");
+        var repoRoot = FindRepoRoot(Directory.GetCurrentDirectory());
+        var outputDir = Path.Combine(repoRoot, "output");
         Directory.CreateDirectory(outputDir);
 
         var filename = $"newsletter-{GetNewsletterSlug(selectedNewsletter)}-{weekEndDate:yyyy-MM-dd}.md";
@@ -439,13 +451,14 @@ static async Task<string?> GenerateVsCodeNewsletterAsync(
     DateOnly weekStart,
     DateOnly weekEnd,
     CacheService cache,
-    string selectedModel)
+    string selectedModel,
+    ILoggerFactory loggerFactory)
 {
     const string VSCodeBlogUrl = "https://code.visualstudio.com/feed.xml";
     const string ChangelogCopilotUrl = "https://github.blog/changelog/label/copilot/feed/";
     const string BlogUrl = "https://github.blog/feed/";
 
-    var feedService = new AtomFeedService();
+    var feedService = new AtomFeedService(loggerFactory.CreateLogger<AtomFeedService>());
     var vscodeService = new VSCodeReleaseNotesService();
     VSCodeReleaseNotes? releaseNotes = null;
     List<ReleaseEntry> vscodeBlogEntries = [];
@@ -539,7 +552,7 @@ static async Task<string?> GenerateVsCodeNewsletterAsync(
     AnsiConsole.Write(vscodeTable);
     AnsiConsole.WriteLine();
 
-    var newsletterService = new NewsletterService();
+    var newsletterService = new NewsletterService(loggerFactory.CreateLogger<NewsletterService>());
     var content = await AnsiConsole.Status()
         .Spinner(Spinner.Known.Star)
         .SpinnerStyle(Style.Parse("cornflowerblue"))
@@ -570,14 +583,16 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
     DateOnly weekStart,
     DateOnly weekEnd,
     CacheService cache,
-    string selectedModel)
+    string selectedModel,
+    ILoggerFactory loggerFactory)
 {
     const string CliAtomUrl = "https://github.com/github/copilot-cli/releases.atom";
     const string SdkAtomUrl = "https://github.com/github/copilot-sdk/releases.atom";
     const string ChangelogCopilotUrl = "https://github.blog/changelog/label/copilot/feed/";
     const string BlogUrl = "https://github.blog/feed/";
 
-    var feedService = new AtomFeedService();
+    var feedService = new AtomFeedService(loggerFactory.CreateLogger<AtomFeedService>());
+    var log = loggerFactory.CreateLogger("CopilotNewsletter");
 
     List<ReleaseEntry> cliReleases = [];
     List<ReleaseEntry> sdkReleases = [];
@@ -608,6 +623,20 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
                 maxContentChars: 800);
         });
 
+    // Roll up prerelease features into matching full releases; drop orphan prereleases
+    var cliPreCount = cliReleases.Count;
+    var sdkPreCount = sdkReleases.Count;
+    cliReleases = AtomFeedService.ConsolidatePrereleases(cliReleases);
+    sdkReleases = AtomFeedService.ConsolidatePrereleases(sdkReleases);
+    log.LogInformation("ConsolidatePrereleases: CLI {Before}->{After}, SDK {SdkBefore}->{SdkAfter}",
+        cliPreCount, cliReleases.Count, sdkPreCount, sdkReleases.Count);
+    foreach (var r in cliReleases)
+        log.LogInformation("  CLI release: {Version} ({Date}, {TextLen} chars text)",
+            r.Version, r.PublishedAt, r.PlainText.Length);
+    foreach (var r in sdkReleases)
+        log.LogInformation("  SDK release: {Version} ({Date}, {TextLen} chars text)",
+            r.Version, r.PublishedAt, r.PlainText.Length);
+
     static string CountCell(int n) => n == 0 ? "[dim]0[/]" : $"[green]{n}[/]";
     static string ItemsCell(IEnumerable<ReleaseEntry> entries, int max = 3)
     {
@@ -633,9 +662,13 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
 
     if (cliReleases.Count == 0 && sdkReleases.Count == 0 && changelogEntries.Count == 0 && blogEntries.Count == 0)
     {
+        log.LogWarning("No items found for date range {Start} to {End}", weekStart, weekEnd);
         AnsiConsole.MarkupLine($"[yellow]⚠[/]  No items found in the date range [bold]{weekStart:yyyy-MM-dd}[/] to [bold]{weekEnd:yyyy-MM-dd}[/].");
         return null;
     }
+
+    log.LogInformation("Feed totals: CLI={Cli}, SDK={Sdk}, Changelog={Changelog}, Blog={Blog}",
+        cliReleases.Count, sdkReleases.Count, changelogEntries.Count, blogEntries.Count);
 
     static string ExtractTLDRBullets(string releaseSection)
     {
@@ -669,7 +702,7 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
     string releaseSection = string.Empty;
     string welcomeSummary = string.Empty;
 
-    var newsletterService = new NewsletterService();
+    var newsletterService = new NewsletterService(loggerFactory.CreateLogger<NewsletterService>());
     await AnsiConsole.Status()
         .Spinner(Spinner.Known.Star)
         .SpinnerStyle(Style.Parse("cornflowerblue"))
@@ -696,13 +729,20 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
             }
             catch (Exception ex)
             {
+                log.LogError(ex, "Error generating newsletter sections");
                 AnsiConsole.MarkupLine($"[red]✗[/] Error: [red]{Markup.Escape(ex.Message)}[/]");
                 AnsiConsole.MarkupLine("[dim]Make sure the GitHub Copilot CLI is installed and in your PATH.[/]");
             }
         });
 
+    log.LogInformation("Generation complete: newsSection={NewsLen} chars, releaseSection={ReleaseLen} chars, welcomeSummary={WelcomeLen} chars",
+        newsSection.Length, releaseSection.Length, welcomeSummary.Length);
+
     if (string.IsNullOrEmpty(releaseSection))
+    {
+        log.LogWarning("releaseSection is empty, returning null");
         return null;
+    }
 
     var contentBuilder = new StringBuilder();
     contentBuilder.AppendLine("Welcome");
@@ -725,4 +765,16 @@ static async Task<string?> GenerateCopilotNewsletterAsync(
 
     contentBuilder.Append(releaseSection);
     return contentBuilder.ToString();
+}
+
+static string FindRepoRoot(string startDir)
+{
+    var dir = new DirectoryInfo(startDir);
+    while (dir != null)
+    {
+        if (dir.EnumerateFiles("*.slnx").Any() || dir.EnumerateFiles("*.sln").Any())
+            return dir.FullName;
+        dir = dir.Parent;
+    }
+    return startDir;
 }

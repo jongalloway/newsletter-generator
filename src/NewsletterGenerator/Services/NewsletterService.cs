@@ -1,10 +1,11 @@
 using GitHub.Copilot.SDK;
+using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using Spectre.Console;
 
 namespace NewsletterGenerator.Services;
 
-public class NewsletterService
+public class NewsletterService(ILogger<NewsletterService> logger)
 {
     public async Task<string> GenerateWelcomeSummaryAsync(
         string newsSection,
@@ -15,7 +16,10 @@ public class NewsletterService
         string? model = null)
     {
         if (string.IsNullOrEmpty(newsSection) && string.IsNullOrEmpty(releaseSummaryBullets))
+        {
+            logger.LogInformation("No news or release bullets provided; returning default welcome text");
             return "This week brings updates to GitHub Copilot CLI & SDK.";
+        }
 
         // Check cache
         var sourceData = $"{newsSection}|||{releaseSummaryBullets}|||{model}";
@@ -23,10 +27,12 @@ public class NewsletterService
         var cached = await cache.TryGetCachedAsync("welcome-summary", sourceHash);
         if (cached != null)
         {
+            logger.LogInformation("Using cached Welcome summary (hash={Hash})", sourceHash[..12]);
             AnsiConsole.MarkupLine("[dim]Using cached Welcome summary[/]");
             return cached;
         }
 
+        logger.LogInformation("Generating Welcome summary (model={Model})", model);
         AnsiConsole.MarkupLine("[grey]Generating Welcome summary...[/]");
         await using var client = new CopilotClient();
         await client.StartAsync();
@@ -81,6 +87,8 @@ public class NewsletterService
             """;
 
         var result = await SendPromptAsync(session, prompt);
+        logger.LogInformation("Welcome summary generated ({Length} chars)", result.Length);
+        logger.LogDebug("Welcome summary content:\n{Content}", result);
 
         // Cache the result
         await cache.SaveCacheAsync("welcome-summary", result, sourceHash);
@@ -96,6 +104,7 @@ public class NewsletterService
         CacheService cache,
         string? model = null)
     {
+        logger.LogInformation("GenerateNewsAndAnnouncementsAsync called: changelog={ChangelogCount}, blog={BlogCount}", changelogEntries.Count, blogEntries.Count);
         if (changelogEntries.Count == 0 && blogEntries.Count == 0)
             return string.Empty;
 
@@ -105,10 +114,12 @@ public class NewsletterService
         var cached = await cache.TryGetCachedAsync("news-announcements", sourceHash);
         if (cached != null)
         {
+            logger.LogInformation("Using cached News and Announcements (hash={Hash})", sourceHash[..12]);
             AnsiConsole.MarkupLine("[dim]Using cached News and Announcements[/]");
             return cached;
         }
 
+        logger.LogInformation("Generating News and Announcements (model={Model})", model);
         AnsiConsole.MarkupLine("[grey]Generating News and Announcements...[/]");
         await using var client = new CopilotClient();
         await client.StartAsync();
@@ -162,6 +173,8 @@ public class NewsletterService
 
         var prompt = BuildNewsPrompt(changelogEntries, blogEntries, weekStart, weekEnd);
         var result = await SendPromptAsync(session, prompt);
+        logger.LogInformation("News section generated ({Length} chars)", result.Length);
+        logger.LogDebug("News section content:\n{Content}", result);
 
         // Cache the result
         await cache.SaveCacheAsync("news-announcements", result, sourceHash);
@@ -177,8 +190,10 @@ public class NewsletterService
         CacheService cache,
         string? model = null)
     {
+        logger.LogInformation("GenerateProductReleaseAsync called: product={Product}, releases={Count}", productName, releases.Count);
         if (releases.Count == 0)
         {
+            logger.LogInformation("{Product}: no releases this week", productName);
             return $"### {productName}\n\n_No new releases this week._\n";
         }
 
@@ -190,48 +205,76 @@ public class NewsletterService
         var cached = await cache.TryGetCachedAsync(cacheKey, sourceHash);
         if (cached != null)
         {
+            logger.LogInformation("Using cached {Product} summary (hash={Hash})", productName, sourceHash[..12]);
             AnsiConsole.MarkupLine($"[dim]Using cached {productName} summary[/]");
             return cached;
         }
 
+        logger.LogInformation("Generating {Product} summary (model={Model}, hash={Hash})", productName, model, sourceHash[..12]);
         AnsiConsole.MarkupLine($"[grey]Generating {productName} summary...[/]");
-        await using var client = new CopilotClient();
-        await client.StartAsync();
-
-        await using var session = await client.CreateSessionAsync(new SessionConfig
-        {
-            Model = model,
-            SystemMessage = new SystemMessageConfig
-            {
-                Mode = SystemMessageMode.Replace,
-                Content = """
-                    You are a technical newsletter editor for a GitHub Copilot developer community.
-                    Your job is to aggressively curate and summarize release notes into polished newsletter content.
-
-                    Curation rules — apply AGGRESSIVELY:
-                    - CONDENSE RUTHLESSLY: Combine 5-10 related changes into a single thematic bullet.
-                    - IGNORE: version bumps, dependency upgrades, internal refactors, test additions,
-                      CI/CD changes, formatting fixes, bug fixes, and anything that doesn't add new
-                      capabilities or significantly change developer workflows.
-                    - COMBINE: Group keyboard shortcuts together, group MCP changes together, group
-                      performance improvements together. DO NOT list them individually.
-                    - HARD LIMIT: Maximum 6 bullets per release version, preferably 3-5. For major releases
-                      with many changes, combine even more aggressively.
-                    - THEMES OVER DETAILS: Focus on high-level themes (e.g., "Terminal UX improvements")
-                      rather than individual features (e.g., listing every keyboard shortcut).
-
-                    Write concise, well-organized Markdown.
-                    
-                    OUTPUT REQUIREMENTS:
-                    - Output ONLY the requested Markdown — no preamble, no commentary, no code fences
-                    - Do NOT include meta-statements like "Here are the highlights" or "Based on my analysis"
-                    - Start directly with the section header (### GitHub Copilot CLI or ### GitHub Copilot SDK)
-                    """
-            }
-        });
 
         var prompt = BuildProductPrompt(productName, releases, weekStart, weekEnd);
-        var result = await SendPromptAsync(session, prompt);
+        logger.LogDebug("{Product} prompt ({Length} chars):\n{Prompt}", productName, prompt.Length, prompt);
+
+        const int maxAttempts = 3;
+        var result = string.Empty;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            if (attempt > 1)
+            {
+                var delay = TimeSpan.FromSeconds(3 * attempt);
+                logger.LogInformation("{Product}: retry {Attempt}/{Max} after {Delay}s delay",
+                    productName, attempt, maxAttempts, delay.TotalSeconds);
+                await Task.Delay(delay);
+            }
+
+            await using var client = new CopilotClient();
+            await client.StartAsync();
+
+            await using var session = await client.CreateSessionAsync(new SessionConfig
+            {
+                Model = model,
+                SystemMessage = new SystemMessageConfig
+                {
+                    Mode = SystemMessageMode.Replace,
+                    Content = """
+                        You are a technical newsletter editor for a GitHub Copilot developer community.
+                        Your job is to aggressively curate and summarize release notes into polished newsletter content.
+
+                        Curation rules — apply AGGRESSIVELY:
+                        - CONDENSE RUTHLESSLY: Combine 5-10 related changes into a single thematic bullet.
+                        - IGNORE: version bumps, dependency upgrades, internal refactors, test additions,
+                          CI/CD changes, formatting fixes, bug fixes, and anything that doesn't add new
+                          capabilities or significantly change developer workflows.
+                        - COMBINE: Group keyboard shortcuts together, group MCP changes together, group
+                          performance improvements together. DO NOT list them individually.
+                        - HARD LIMIT: Maximum 6 bullets per release version, preferably 3-5. For major releases
+                          with many changes, combine even more aggressively.
+                        - THEMES OVER DETAILS: Focus on high-level themes (e.g., "Terminal UX improvements")
+                          rather than individual features (e.g., listing every keyboard shortcut).
+
+                        Write concise, well-organized Markdown.
+                        
+                        OUTPUT REQUIREMENTS:
+                        - Output ONLY the requested Markdown — no preamble, no commentary, no code fences
+                        - Do NOT include meta-statements like "Here are the highlights" or "Based on my analysis"
+                        - Start directly with the section header (### GitHub Copilot CLI or ### GitHub Copilot SDK)
+                        """
+                }
+            });
+
+            result = await SendPromptAsync(session, prompt);
+            logger.LogInformation("{Product} attempt {Attempt}: {Length} chars", productName, attempt, result.Length);
+
+            if (!string.IsNullOrWhiteSpace(result))
+                break;
+
+            logger.LogWarning("{Product}: empty response on attempt {Attempt}/{Max}", productName, attempt, maxAttempts);
+        }
+
+        logger.LogInformation("{Product} summary generated ({Length} chars)", productName, result.Length);
+        logger.LogDebug("{Product} summary content:\n{Content}", productName, result);
 
         // Cache the result
         await cache.SaveCacheAsync(cacheKey, result, sourceHash);
@@ -247,9 +290,15 @@ public class NewsletterService
         CacheService cache,
         string? model = null)
     {
+        logger.LogInformation("GenerateReleaseSectionAsync: CLI={CliCount} releases, SDK={SdkCount} releases",
+            cliReleases.Count, sdkReleases.Count);
+
         // Generate CLI and SDK summaries separately (with caching)
         var cliSummary = await GenerateProductReleaseAsync("GitHub Copilot CLI", cliReleases, weekStart, weekEnd, cache, model);
+        logger.LogInformation("CLI summary result: {Length} chars, empty={IsEmpty}", cliSummary.Length, string.IsNullOrWhiteSpace(cliSummary));
+
         var sdkSummary = await GenerateProductReleaseAsync("GitHub Copilot SDK", sdkReleases, weekStart, weekEnd, cache, model);
+        logger.LogInformation("SDK summary result: {Length} chars, empty={IsEmpty}", sdkSummary.Length, string.IsNullOrWhiteSpace(sdkSummary));
 
         // Combine into final section
         var sb = new StringBuilder();
@@ -262,7 +311,10 @@ public class NewsletterService
         sb.AppendLine();
         sb.Append(sdkSummary);
 
-        return sb.ToString();
+        var combined = sb.ToString();
+        logger.LogInformation("Combined release section: {Length} chars", combined.Length);
+        logger.LogDebug("Combined release section content:\n{Content}", combined);
+        return combined;
     }
 
     public async Task<string> GenerateVsCodeNewsletterAsync(
@@ -375,9 +427,11 @@ public class NewsletterService
         return sb.ToString();
     }
 
-    private static async Task<string> SendPromptAsync(CopilotSession session, string prompt)
+    private async Task<string> SendPromptAsync(CopilotSession session, string prompt)
     {
+        logger.LogDebug("SendPromptAsync: sending prompt ({Length} chars)", prompt.Length);
         var response = new StringBuilder();
+        var eventCount = 0;
         var tcs = new TaskCompletionSource<string>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -386,20 +440,38 @@ public class NewsletterService
             switch (evt)
             {
                 case AssistantMessageEvent msg:
-                    response.Clear();
-                    response.Append(msg.Data.Content);
+                    eventCount++;
+                    var contentLen = msg.Data.Content?.Length ?? 0;
+                    logger.LogDebug("AssistantMessageEvent #{Count}: {Length} chars", eventCount, contentLen);
+                    if (contentLen > 0)
+                    {
+                        response.Clear();
+                        response.Append(msg.Data.Content);
+                    }
+                    else
+                    {
+                        logger.LogDebug("Ignoring empty AssistantMessageEvent #{Count}", eventCount);
+                    }
                     break;
                 case SessionIdleEvent:
+                    logger.LogDebug("SessionIdleEvent received after {Count} message events", eventCount);
                     tcs.TrySetResult(response.ToString());
                     break;
                 case SessionErrorEvent err:
+                    logger.LogError("Copilot session error: {Message}", err.Data.Message);
                     tcs.TrySetException(new InvalidOperationException(err.Data.Message));
                     break;
             }
         });
 
         await session.SendAsync(new MessageOptions { Prompt = prompt });
-        return await tcs.Task;
+        var result = await tcs.Task;
+        logger.LogInformation("SendPromptAsync: received response ({Length} chars, empty={IsEmpty}, events={Events})",
+            result.Length, string.IsNullOrWhiteSpace(result), eventCount);
+        if (string.IsNullOrWhiteSpace(result))
+            logger.LogWarning("SendPromptAsync: AI returned empty response for prompt starting with: {PromptStart}",
+                prompt.Length > 200 ? prompt[..200] : prompt);
+        return result;
     }
 
     private static string BuildProductPrompt(
@@ -435,15 +507,17 @@ public class NewsletterService
             {(releases.Count > 1 ? @"<SUMMARY: 4–6 curated themed bullets spanning ALL releases this week.
              Each bullet groups related changes under one theme.
              Format: - <emoji> **<Short Category Label>** — <concise description combining related changes>
-             Example: - 🧠 **Models & context** — Adds Claude Opus 4.6 Fast (Preview) and 1M-token context support.>
+             Example: - 🧠 **Models & context** — Adds Claude Opus 4.6 Fast (Preview) and 1M-token context support.
+             Emojis are ONLY used here in the summary. Do NOT use emojis in the per-release bullets below.>
 
             " : "")}## Releases
 
-            <one sub-section per version with MAXIMUM 6 bullets (ideally 3-5), highly condensed thematic summaries>
+            <one sub-section per version with MAXIMUM 6 bullets (ideally 3-5), highly condensed thematic summaries.
+             Do NOT use emojis in per-release bullets. Use **bold labels** only.>
             ### vX.X.X (YYYY-MM-DD)
 
-            - Combined thematic bullet covering multiple related changes
-            - Another thematic bullet (e.g., "Terminal UX improvements" covering 10+ individual changes)
+            - **Category label** — Combined thematic bullet covering multiple related changes
+            - **Another label** — Another thematic bullet (e.g., "Terminal UX improvements" covering 10+ individual changes)
 
             Release notes: [Releases - github/{repoName}](https://github.com/github/{repoName}/releases)
 

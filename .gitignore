@@ -41,6 +41,7 @@ secrets.json
 # Logs
 *.log
 logs/
+log/
 
 # Temp files
 *.tmp

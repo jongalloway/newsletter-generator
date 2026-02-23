@@ -1,0 +1,6 @@
+{
+    "explorer.excludeGitIgnore": false,
+    "chat.tools.terminal.autoApprove": {
+        "dotnet add": true
+    }
+}
