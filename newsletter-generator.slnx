@@ -2,6 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src\NewsletterGenerator\NewsletterGenerator.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NewsletterGenerator.Tests/NewsletterGenerator.Tests.csproj" />
+  </Folder>
   <Properties>
     <SolutionGuid>{88180031-3095-4B88-B4FF-FAD7B81D304E}</SolutionGuid>
   </Properties>
