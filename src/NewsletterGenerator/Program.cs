@@ -103,7 +103,7 @@ do
     string title = $"{GetNewsletterLabel(selectedNewsletter)} Weekly Newsletter";
     if (selectedNewsletter == NewsletterType.VSCode)
     {
-        content = await GenerateVsCodeNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
+        (content, title) = await GenerateVsCodeNewsletterAsync(weekStartDate, weekEndDate, cache, selectedModel, loggerFactory);
     }
     else
     {
@@ -448,13 +448,14 @@ static async Task<string> SelectModelAsync(string? modelArg, List<ModelInfo>? ca
     }
 }
 
-static async Task<string?> GenerateVsCodeNewsletterAsync(
+static async Task<(string? Content, string Title)> GenerateVsCodeNewsletterAsync(
     DateOnly weekStart,
     DateOnly weekEnd,
     CacheService cache,
     string selectedModel,
     ILoggerFactory loggerFactory)
 {
+    var defaultTitle = "VS Code Insiders Weekly Newsletter";
     const string VSCodeBlogUrl = "https://code.visualstudio.com/feed.xml";
     const string ChangelogCopilotUrl = "https://github.blog/changelog/label/copilot/feed/";
     const string BlogUrl = "https://github.blog/feed/";
@@ -517,7 +518,7 @@ static async Task<string?> GenerateVsCodeNewsletterAsync(
          githubBlogVsCodeEntries.Count == 0))
     {
         AnsiConsole.MarkupLine($"[yellow]⚠[/]  No VS Code-related items found in the date range [bold]{weekStart:yyyy-MM-dd}[/] to [bold]{weekEnd:yyyy-MM-dd}[/].");
-        return null;
+        return (null, defaultTitle);
     }
 
     var categorySummary = releaseNotes.Features
@@ -574,10 +575,49 @@ static async Task<string?> GenerateVsCodeNewsletterAsync(
     if (string.IsNullOrWhiteSpace(content))
     {
         AnsiConsole.MarkupLine("[yellow]⚠[/] Empty VS Code newsletter result.");
-        return null;
+        return (null, defaultTitle);
     }
 
-    return content;
+    // Extract the welcome paragraph to generate a title
+    var welcomeSummary = ExtractWelcomeSummary(content);
+    var title = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Star)
+        .SpinnerStyle(Style.Parse("cornflowerblue"))
+        .StartAsync("Generating newsletter title...", async _ =>
+        {
+            var newsletterLabel = GetNewsletterLabel(NewsletterType.VSCode);
+            return await newsletterService.GenerateNewsletterTitleAsync(
+                welcomeSummary, newsletterLabel, cache, selectedModel);
+        });
+
+    return (content, title);
+}
+
+static string ExtractWelcomeSummary(string content)
+{
+    var lines = content.Split('\n');
+    var sb = new StringBuilder();
+    bool inWelcome = false;
+
+    foreach (var line in lines)
+    {
+        if (line.TrimStart().StartsWith("Welcome", StringComparison.OrdinalIgnoreCase))
+        {
+            inWelcome = true;
+            continue;
+        }
+
+        if (inWelcome && line.Trim() == "--------")
+            continue;
+
+        if (inWelcome && (line.Trim() == "* * * * *" || line.TrimStart().StartsWith("---")))
+            break;
+
+        if (inWelcome && !string.IsNullOrWhiteSpace(line))
+            sb.AppendLine(line);
+    }
+
+    return sb.ToString().Trim();
 }
 
 static async Task<(string? Content, string Title)> GenerateCopilotNewsletterAsync(
