@@ -450,6 +450,10 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                     ### VS Code Insiders
 
                     - 4-8 concise bullets grouped by themes
+                    - Each bullet MUST start with a relevant emoji before the bolded title
+                    - Format: - <emoji> **Title:** description
+                    - Example: - 🌐 **Native browser integration:** agents can now interact with page elements...
+                    - Pick emojis that match the topic (e.g., 🤖 for AI, 🔧 for tools, 🖥️ for terminal, 🔒 for security)
 
                     Release notes: [VS Code Insiders](URL)
                     """
