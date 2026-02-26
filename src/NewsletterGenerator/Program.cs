@@ -242,9 +242,10 @@ internal static class NewsletterApp
                 }
             }
 
+            var cacheDir = Path.Combine(repoRoot, "src", "NewsletterGenerator", ".cache");
+
             if (clearCache)
             {
-                var cacheDir = Path.Combine(repoRoot, "src", "NewsletterGenerator", ".cache");
                 if (Directory.Exists(cacheDir))
                 {
                     Directory.Delete(cacheDir, recursive: true);
@@ -256,7 +257,7 @@ internal static class NewsletterApp
                 }
             }
 
-            var cache = new CacheService(loggerFactory.CreateLogger<CacheService>(), forceRefresh: forceRefresh);
+            var cache = new CacheService(loggerFactory.CreateLogger<CacheService>(), cacheDir, forceRefresh: forceRefresh);
 
             string? content;
             string title;
