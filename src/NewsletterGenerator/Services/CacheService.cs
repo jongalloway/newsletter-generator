@@ -28,7 +28,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     {
         if (_forceRefresh)
         {
-            logger.LogDebug("Cache skip (force refresh): {CacheKey}", cacheKey);
+            ServiceLogMessages.CacheSkipForceRefresh(logger, cacheKey);
             return null;
         }
 
@@ -37,7 +37,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
         if (!File.Exists(cacheFile))
         {
-            logger.LogDebug("Cache miss (no file): {CacheKey}", cacheKey);
+            ServiceLogMessages.CacheMissNoFile(logger, cacheKey);
             return null;
         }
 
@@ -48,15 +48,15 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
             if (cached?.SourceHash == sourceHash)
             {
-                logger.LogInformation("Cache hit: {CacheKey} (hash={Hash}, content={Length} chars)", cacheKey, sourceHash[..12], cached.Content.Length);
+                ServiceLogMessages.CacheHit(logger, cacheKey, sourceHash[..12], cached.Content.Length);
                 return cached.Content;
             }
 
-            logger.LogDebug("Cache miss (hash mismatch): {CacheKey} expected={Expected} actual={Actual}", cacheKey, sourceHash[..12], cached?.SourceHash?[..12]);
+            ServiceLogMessages.CacheMissHashMismatch(logger, cacheKey, sourceHash[..12], cached?.SourceHash?[..12]);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Cache read failed for {CacheKey}", cacheKey);
+            ServiceLogMessages.CacheReadFailed(logger, ex, cacheKey);
         }
 
         return null;
@@ -69,11 +69,11 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     {
         if (string.IsNullOrWhiteSpace(content))
         {
-            logger.LogWarning("Skipping cache save for {CacheKey}: content is empty", cacheKey);
+            ServiceLogMessages.CacheSaveSkippedEmpty(logger, cacheKey);
             return;
         }
 
-        logger.LogInformation("Saving cache: {CacheKey} (hash={Hash}, content={Length} chars)", cacheKey, sourceHash[..12], content.Length);
+        ServiceLogMessages.CacheSaving(logger, cacheKey, sourceHash[..12], content.Length);
 
         EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
