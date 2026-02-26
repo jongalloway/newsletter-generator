@@ -2,6 +2,8 @@
 
 Automated weekly newsletter generator for GitHub Copilot CLI/SDK or VS Code Insiders updates.
 
+> **Note:** This tool was built for generating internal team newsletters, but all source data comes from public release feeds and blog posts. You're welcome to fork and adapt it for your own newsletter needs.
+
 ## What it does
 
 This tool generates a curated weekly newsletter by:
