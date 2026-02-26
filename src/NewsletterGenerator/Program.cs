@@ -151,6 +151,20 @@ internal sealed class DoctorCommand : AsyncCommand<CommandSettings>
         var models = await NewsletterApp.PrintCopilotStartupStatusAsync();
         var healthy = models != null && models.Count > 0;
 
+        // Lightweight connectivity ping
+        try
+        {
+            await using var client = new CopilotClient();
+            await client.StartAsync();
+            var ping = await client.PingAsync();
+            AnsiConsole.MarkupLine($"[green]✓[/] Ping: OK");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[yellow]⚠[/] Ping failed: {Markup.Escape(ex.Message)}");
+            healthy = false;
+        }
+
         if (healthy)
             AnsiConsole.MarkupLine("[green]Environment checks passed.[/]");
         else
@@ -200,8 +214,9 @@ internal static class NewsletterApp
         do
         {
             var metrics = new RunMetrics();
+            var runStopwatch = Stopwatch.StartNew();
 
-            var availableModels = await PrintCopilotStartupStatusAsync();
+            var availableModels = await PrintCopilotStartupStatusAsync(metrics);
 
             var selectedNewsletter = ResolveNewsletterType(settings.Newsletter) ??
                 (nonInteractive ? NewsletterType.CopilotCliSdk : PromptForNewsletterType());
@@ -250,10 +265,12 @@ internal static class NewsletterApp
                 {
                     Directory.Delete(cacheDir, recursive: true);
                     AnsiConsole.MarkupLine("[green]✓[/] Cache cleared");
+                    metrics.Warnings.Add("Cache cleared before run.");
                 }
                 else
                 {
                     AnsiConsole.MarkupLine("[dim]No cache to clear[/]");
+                    metrics.Warnings.Add("Requested cache clear, but no cache directory existed.");
                 }
             }
 
@@ -296,6 +313,7 @@ internal static class NewsletterApp
             metrics.CacheHits = cache.CacheHits;
             metrics.CacheMisses = cache.CacheMisses;
             metrics.CacheSkips = cache.CacheSkips;
+            metrics.CacheSections = cache.GetSectionMetrics();
 
             if (!string.IsNullOrWhiteSpace(content))
             {
@@ -310,14 +328,21 @@ internal static class NewsletterApp
 
                 metrics.OutputPath = outputPath;
                 metrics.OverwroteOutput = File.Exists(outputPath);
+                metrics.OutputCharacters = content.Length;
+                metrics.OutputLines = content.Split('\n').Length;
+                metrics.OutputSections = CountSections(content);
 
                 if (metrics.OverwroteOutput)
                 {
                     AnsiConsole.MarkupLine($"[yellow]⚠[/] Overwriting existing file [underline]{Markup.Escape(outputPath)}[/]");
                     File.SetAttributes(outputPath, FileAttributes.Normal);
+                    metrics.Warnings.Add("Output file already existed and was overwritten.");
                 }
 
+                var writeStopwatch = Stopwatch.StartNew();
                 await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
+                writeStopwatch.Stop();
+                metrics.StageSeconds["Write output"] = writeStopwatch.Elapsed.TotalSeconds;
 
                 AnsiConsole.MarkupLine($"[green]✓[/] Newsletter written to [underline]{Markup.Escape(outputPath)}[/]");
                 AnsiConsole.WriteLine();
@@ -333,6 +358,13 @@ internal static class NewsletterApp
                             .Expand());
                 }
             }
+            else
+            {
+                metrics.Warnings.Add("No newsletter output was generated for this run.");
+            }
+
+            runStopwatch.Stop();
+            metrics.TotalWallSeconds = runStopwatch.Elapsed.TotalSeconds;
 
             RenderRunDashboard(metrics, selectedNewsletter, selectedModel, useCache, weekStartDate, weekEndDate);
 
@@ -359,6 +391,21 @@ internal static class NewsletterApp
         AnsiConsole.Write(new Rule("[cornflowerblue]GitHub Copilot CLI & SDK Weekly Generator[/]")
             .LeftJustified());
         AnsiConsole.WriteLine();
+    }
+
+    private static ProgressTask AddInactiveTask(ProgressContext ctx, string label)
+    {
+        return ctx.AddTask($"[grey]{label}[/]", maxValue: 100);
+    }
+
+    private static void SetTaskActive(ProgressTask task, string label)
+    {
+        task.Description = $"[cornflowerblue]{label}[/]";
+    }
+
+    private static void SetTaskInactive(ProgressTask task, string label)
+    {
+        task.Description = $"[grey]{label}[/]";
     }
 
     private static void RenderPreRunSummary(
@@ -401,50 +448,145 @@ internal static class NewsletterApp
         DateOnly weekStart,
         DateOnly weekEnd)
     {
+        var totalWorkSeconds = metrics.StageSeconds.Values.Sum();
+        var parallelSavedSeconds = Math.Max(0, totalWorkSeconds - metrics.TotalWallSeconds);
+
         var summaryTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
             .AddColumn("[bold]Metric[/]")
             .AddColumn("[bold]Value[/]");
 
-        summaryTable.AddRow("Newsletter", Markup.Escape(GetNewsletterLabel(newsletter)));
+        summaryTable.AddRow("Mode", $"{Markup.Escape(GetNewsletterLabel(newsletter))} [grey]({weekStart:yyyy-MM-dd} -> {weekEnd:yyyy-MM-dd})[/]");
         summaryTable.AddRow("Model", Markup.Escape(model));
-        summaryTable.AddRow("Date range", $"{weekStart:yyyy-MM-dd} -> {weekEnd:yyyy-MM-dd}");
-        summaryTable.AddRow("Cache mode", useCache ? "Read/write" : "Force refresh");
-        summaryTable.AddRow("Cache hits", metrics.CacheHits.ToString());
-        summaryTable.AddRow("Cache misses", metrics.CacheMisses.ToString());
-        summaryTable.AddRow("Cache skips", metrics.CacheSkips.ToString());
-        summaryTable.AddRow("Output file", string.IsNullOrWhiteSpace(metrics.OutputPath) ? "(none)" : Markup.Escape(metrics.OutputPath));
+        summaryTable.AddRow("SDK", $"Streaming: {(metrics.StreamingEnabled ? "On" : "Off")}, Reasoning: {Markup.Escape(metrics.ReasoningEffort)}");
+        summaryTable.AddRow("Cache", $"{(useCache ? "Read/write" : "Force refresh")} [grey](hits {metrics.CacheHits}, misses {metrics.CacheMisses}, skips {metrics.CacheSkips})[/]");
+        summaryTable.AddRow("Timing", $"Wall [white]{metrics.TotalWallSeconds:F1}s[/], work [white]{totalWorkSeconds:F1}s[/], saved [green]{parallelSavedSeconds:F1}s[/]");
+        summaryTable.AddRow("Output", string.IsNullOrWhiteSpace(metrics.OutputPath)
+            ? "(none)"
+            : $"{Markup.Escape(metrics.OutputPath)} [grey]({metrics.OutputCharacters:N0} chars, {metrics.OutputLines:N0} lines, {metrics.OutputSections} sections)[/]");
         summaryTable.AddRow("Overwrite", metrics.OverwroteOutput ? "Yes" : "No");
 
         var sourceTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
             .AddColumn("[bold]Source[/]")
-            .AddColumn("[bold]Items[/]")
+            .AddColumn("[bold]Raw[/]")
+            .AddColumn("[bold]Filtered[/]")
+            .AddColumn("[bold]Final[/]")
             .AddColumn("[bold]Notes[/]");
 
         foreach (var count in metrics.SourceCounts)
-            sourceTable.AddRow(Markup.Escape(count.Source), count.Count.ToString(), Markup.Escape(count.Notes));
+            sourceTable.AddRow(
+                Markup.Escape(count.Source),
+                Markup.Escape(count.RawCount),
+                Markup.Escape(count.FilteredCount),
+                Markup.Escape(count.FinalCount),
+                Markup.Escape(count.Notes));
+
+        var cacheTable = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .AddColumn("[bold]Section[/]")
+            .AddColumn("[bold]Read[/]")
+            .AddColumn("[bold]Save[/]")
+            .AddColumn("[bold]Size[/]");
+
+        foreach (var cacheMetric in metrics.CacheSections)
+        {
+            cacheTable.AddRow(
+                Markup.Escape(cacheMetric.Key),
+                FormatCacheOutcome(cacheMetric.ReadOutcome),
+                FormatCacheOutcome(cacheMetric.SaveOutcome),
+                cacheMetric.ContentLength is int length ? $"{length:N0} chars" : "-");
+        }
+
+        if (metrics.CacheSections.Count == 0)
+            cacheTable.AddRow("(none)", "-", "-", "-");
+
+        var timingTable = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .AddColumn("[bold]Stage[/]")
+            .AddColumn(new TableColumn("[bold]Seconds[/]").RightAligned());
+
+        foreach (var kvp in metrics.StageSeconds.OrderByDescending(k => k.Value))
+            timingTable.AddRow(Markup.Escape(kvp.Key), $"{kvp.Value:F2}");
+
+        if (metrics.StageSeconds.Count == 0)
+            timingTable.AddRow("(none)", "0.00");
+
+        var warningMarkup = metrics.Warnings.Count == 0
+            ? "[green]No warnings. Clean run.[/]"
+            : string.Join("\n", metrics.Warnings.Select(w => $"[yellow]•[/] {Markup.Escape(w)}"));
 
         var chart = new BarChart()
-            .Width(70)
+            .Width(48)
             .Label("[bold]Stage Duration (seconds)[/]")
             .CenterLabel();
 
         foreach (var kvp in metrics.StageSeconds.OrderByDescending(k => k.Value))
-            chart.AddItem(kvp.Key, kvp.Value, Color.CornflowerBlue);
+        {
+            var color = kvp.Key.Contains("Fetch", StringComparison.OrdinalIgnoreCase)
+                ? Color.Yellow
+                : kvp.Key.Contains("output", StringComparison.OrdinalIgnoreCase)
+                    ? Color.SpringGreen3
+                    : Color.CornflowerBlue;
+            chart.AddItem(kvp.Key, kvp.Value, color);
+        }
 
-        var layout = new Layout("Root")
-            .SplitRows(
-                new Layout("Top").Update(summaryTable),
-                new Layout("Middle").Update(sourceTable),
-                new Layout("Bottom").Update(new Panel(chart).Header("[cornflowerblue]Run Dashboard[/]").Border(BoxBorder.Rounded).BorderColor(Color.Grey))
-            );
+        if (metrics.StageSeconds.Count == 0)
+            chart.AddItem("(none)", 0, Color.Grey);
 
-        AnsiConsole.Write(layout);
+        AnsiConsole.Write(new Panel(summaryTable)
+            .Header("[cornflowerblue]✨ Run Summary[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Expand());
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(new Markup(warningMarkup))
+            .Header("[cornflowerblue]⚠ Signals[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Expand());
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(cacheTable)
+            .Header("[cornflowerblue]💾 Cache by Section[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Expand());
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(sourceTable)
+            .Header("[cornflowerblue]🧪 Source Pipeline[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Expand());
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(timingTable)
+            .Header("[cornflowerblue]⏱ Stage Timing[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Expand());
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(chart)
+            .Header("[cornflowerblue]📊 Timing Chart[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Expand());
         AnsiConsole.WriteLine();
     }
+
+    private static string FormatCacheOutcome(string? outcome) => outcome switch
+    {
+        "hit" => "[green]hit[/]",
+        "saved" => "[green]saved[/]",
+        "miss" => "[yellow]miss[/]",
+        "mismatch" => "[yellow]mismatch[/]",
+        "skip" => "[grey]skip[/]",
+        "empty" => "[grey]empty[/]",
+        "error" => "[red]error[/]",
+        _ => "-"
+    };
 
     private static void RenderFriendlyException(Exception ex, bool debug)
     {
@@ -567,42 +709,92 @@ internal static class NewsletterApp
             || combined.Contains("code.visualstudio.com", StringComparison.OrdinalIgnoreCase);
     }
 
-    public static async Task<List<ModelInfo>?> PrintCopilotStartupStatusAsync()
+    public static async Task<List<ModelInfo>?> PrintCopilotStartupStatusAsync(RunMetrics? metrics = null)
     {
-        var cliPath = await TryFindCopilotCliOnPathAsync() ?? "copilot";
-
-        string versionStatus;
-        var versionResult = await TryRunProcessAsync(cliPath, "--version");
-        if (versionResult.success && versionResult.exitCode == 0)
-            versionStatus = string.IsNullOrWhiteSpace(versionResult.standardOutput) ? "Available" : versionResult.standardOutput;
-        else
-            versionStatus = string.IsNullOrWhiteSpace(versionResult.standardError) ? "Unavailable" : versionResult.standardError;
-
-        string authStatus;
-        bool isAuthenticated;
-        string sdkStatus;
+        string cliPath = "copilot";
+        string versionStatus = "Unknown";
+        string authStatus = "Unknown";
+        bool isAuthenticated = false;
+        string sdkStatus = "Unknown";
         List<ModelInfo>? models = null;
 
-        try
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("cornflowerblue"))
+            .StartAsync("Connecting to Copilot CLI...", async ctx =>
         {
-            await using var client = new CopilotClient();
-            var sdkAuthStatus = await client.GetAuthStatusAsync();
+            // Run CLI path/version discovery in parallel with SDK connection
+            var cliTask = Task.Run(async () =>
+            {
+                var cliStopwatch = Stopwatch.StartNew();
+                var path = await TryFindCopilotCliOnPathAsync() ?? "copilot";
+                var versionResult = await TryRunProcessAsync(path, "--version");
+                string version;
+                if (versionResult.success && versionResult.exitCode == 0)
+                    version = string.IsNullOrWhiteSpace(versionResult.standardOutput) ? "Available" : versionResult.standardOutput;
+                else
+                    version = string.IsNullOrWhiteSpace(versionResult.standardError) ? "Unavailable" : versionResult.standardError;
+                cliStopwatch.Stop();
+                return (path, version, cliStopwatch.Elapsed.TotalSeconds);
+            });
 
-            isAuthenticated = !string.IsNullOrEmpty(sdkAuthStatus.Login);
-            authStatus = string.IsNullOrWhiteSpace(sdkAuthStatus.StatusMessage)
-                ? (isAuthenticated ? "Authenticated" : "Not authenticated")
-                : sdkAuthStatus.StatusMessage;
+            var sdkTask = Task.Run(async () =>
+            {
+                var sdkStopwatch = Stopwatch.StartNew();
+                await using var client = new CopilotClient();
+                var sdkAuthStatus = await client.GetAuthStatusAsync();
 
-            await client.StartAsync();
-            models = await client.ListModelsAsync();
-            sdkStatus = models == null ? "Connected" : $"Connected ({models.Count} models available)";
-        }
-        catch (Exception ex)
-        {
-            isAuthenticated = false;
-            authStatus = ex.Message;
-            sdkStatus = $"Not ready: {Truncate(ex.Message, 120)}";
-        }
+                var authed = !string.IsNullOrEmpty(sdkAuthStatus.Login);
+                var auth = string.IsNullOrWhiteSpace(sdkAuthStatus.StatusMessage)
+                    ? (authed ? "Authenticated" : "Not authenticated")
+                    : sdkAuthStatus.StatusMessage;
+
+                await client.StartAsync();
+
+                // List models and ping in parallel once connected
+                var modelsTask = client.ListModelsAsync();
+                var pingTask = client.PingAsync().ContinueWith(t => t.IsCompletedSuccessfully ? "OK" : "Failed");
+
+                await Task.WhenAll(modelsTask, pingTask);
+
+                var m = await modelsTask;
+                var ping = await pingTask;
+                var status = m == null ? "Connected" : $"Connected ({m.Count} models available, ping: {ping})";
+                sdkStopwatch.Stop();
+
+                return (authed, auth, m, status, ping, sdkStopwatch.Elapsed.TotalSeconds);
+            });
+
+            try
+            {
+                await Task.WhenAll(cliTask, sdkTask);
+            }
+            catch
+            {
+                // Individual results handled below
+            }
+
+            if (cliTask.IsCompletedSuccessfully)
+            {
+                (cliPath, versionStatus, var cliSeconds) = cliTask.Result;
+                metrics?.StageSeconds.TryAdd("Startup: CLI discovery", cliSeconds);
+            }
+
+            if (sdkTask.IsCompletedSuccessfully)
+            {
+                (isAuthenticated, authStatus, models, sdkStatus, var pingStatus, var sdkSeconds) = sdkTask.Result;
+                metrics?.StageSeconds.TryAdd("Startup: SDK ready", sdkSeconds);
+                if (!string.Equals(pingStatus, "OK", StringComparison.OrdinalIgnoreCase))
+                    metrics?.Warnings.Add("Copilot SDK ping failed during startup checks.");
+            }
+            else if (sdkTask.IsFaulted)
+            {
+                var ex = sdkTask.Exception?.InnerException ?? sdkTask.Exception;
+                authStatus = ex?.Message ?? "Unknown error";
+                sdkStatus = $"Not ready: {Truncate(ex?.Message ?? "Unknown error", 120)}";
+                metrics?.Warnings.Add($"Copilot SDK startup failed: {ex?.Message ?? "Unknown error"}");
+            }
+        });
 
         var statusTable = new Table()
             .Border(TableBorder.Rounded)
@@ -710,13 +902,16 @@ internal static class NewsletterApp
                     .HideCompleted(false)
                     .StartAsync(async ctx =>
                     {
-                        var task = ctx.AddTask("[cornflowerblue]Querying available models[/]", maxValue: 100);
+                        const string taskLabel = "Querying available models";
+                        var task = AddInactiveTask(ctx, taskLabel);
                         await using var client = new CopilotClient();
+                        SetTaskActive(task, taskLabel);
                         task.Increment(40);
                         await client.StartAsync();
                         task.Increment(30);
                         models = await client.ListModelsAsync();
                         task.Increment(30);
+                        SetTaskInactive(task, taskLabel);
                     });
             }
 
@@ -777,52 +972,98 @@ internal static class NewsletterApp
         List<ReleaseEntry> vscodeBlogEntries = [];
         List<ReleaseEntry> changelogEntries = [];
         List<ReleaseEntry> githubBlogEntries = [];
+        VSCodeReleaseNotesFetchResult? releaseNotesResult = null;
+        FeedFetchResult? vscodeBlogResult = null;
+        FeedFetchResult? changelogResult = null;
+        FeedFetchResult? githubBlogResult = null;
 
-        var fetchStopwatch = Stopwatch.StartNew();
         await AnsiConsole.Progress().AutoClear(false).HideCompleted(false).StartAsync(async ctx =>
         {
-            var notesTask = ctx.AddTask("[cornflowerblue]VS Code release notes[/]", maxValue: 100);
-            var vscodeBlogTask = ctx.AddTask("[cornflowerblue]VS Code blog feed[/]", maxValue: 100);
-            var changelogTask = ctx.AddTask("[cornflowerblue]Copilot changelog feed[/]", maxValue: 100);
-            var githubBlogTask = ctx.AddTask("[cornflowerblue]GitHub blog feed[/]", maxValue: 100);
+            const string notesLabel = "VS Code release notes";
+            const string vscodeBlogLabel = "VS Code blog feed";
+            const string changelogLabel = "Copilot changelog feed";
+            const string githubBlogLabel = "GitHub blog feed";
 
-            releaseNotes = await vscodeService.GetReleaseNotesForDateRangeAsync(weekStart, weekEnd);
-            notesTask.Increment(100);
+            var notesTask = AddInactiveTask(ctx, notesLabel);
+            var vscodeBlogTask = AddInactiveTask(ctx, vscodeBlogLabel);
+            var changelogTask = AddInactiveTask(ctx, changelogLabel);
+            var githubBlogTask = AddInactiveTask(ctx, githubBlogLabel);
 
-            vscodeBlogEntries = await feedService.FetchFeedAsync(
-                VSCodeBlogUrl,
-                weekStart,
-                weekEnd,
-                preferShortSummary: true,
-                maxContentChars: 1000);
-            vscodeBlogTask.Increment(100);
+            releaseNotesResult = await RunTrackedTaskAsync(
+                notesTask,
+                notesLabel,
+                () => vscodeService.GetReleaseNotesFetchResultForDateRangeAsync(weekStart, weekEnd),
+                metrics,
+                "Fetch: VS Code release notes");
+            releaseNotes = releaseNotesResult.ReleaseNotes;
 
-            changelogEntries = await feedService.FetchFeedAsync(
-                ChangelogCopilotUrl,
-                weekStart,
-                weekEnd,
-                maxContentChars: 1500);
-            changelogTask.Increment(100);
+            vscodeBlogResult = await RunTrackedTaskAsync(
+                vscodeBlogTask,
+                vscodeBlogLabel,
+                () => feedService.FetchFeedWithMetricsAsync(
+                    VSCodeBlogUrl,
+                    weekStart,
+                    weekEnd,
+                    preferShortSummary: true,
+                    maxContentChars: 1000),
+                metrics,
+                "Fetch: VS Code blog");
+            vscodeBlogEntries = vscodeBlogResult.Entries;
 
-            githubBlogEntries = await feedService.FetchFeedAsync(
-                BlogUrl,
-                weekStart,
-                weekEnd,
-                preferShortSummary: true,
-                maxContentChars: 1000);
-            githubBlogTask.Increment(100);
+            changelogResult = await RunTrackedTaskAsync(
+                changelogTask,
+                changelogLabel,
+                () => feedService.FetchFeedWithMetricsAsync(
+                    ChangelogCopilotUrl,
+                    weekStart,
+                    weekEnd,
+                    maxContentChars: 1500),
+                metrics,
+                "Fetch: Copilot changelog");
+            changelogEntries = changelogResult.Entries;
+
+            githubBlogResult = await RunTrackedTaskAsync(
+                githubBlogTask,
+                githubBlogLabel,
+                () => feedService.FetchFeedWithMetricsAsync(
+                    BlogUrl,
+                    weekStart,
+                    weekEnd,
+                    preferShortSummary: true,
+                    maxContentChars: 1000),
+                metrics,
+                "Fetch: GitHub blog");
+            githubBlogEntries = githubBlogResult.Entries;
         });
-        fetchStopwatch.Stop();
-        metrics.StageSeconds["Fetch sources"] = fetchStopwatch.Elapsed.TotalSeconds;
 
         var vscodeMentionEntries = vscodeBlogEntries.Where(MentionsVsCode).ToList();
         var changelogVsCodeEntries = changelogEntries.Where(MentionsVsCode).ToList();
         var githubBlogVsCodeEntries = githubBlogEntries.Where(MentionsVsCode).ToList();
 
-        metrics.SourceCounts.Add(new SourceCount("VS Code Insiders", releaseNotes?.Features.Count ?? 0, "Parsed features"));
-        metrics.SourceCounts.Add(new SourceCount("VS Code Blog", vscodeMentionEntries.Count, "Mentions VS Code"));
-        metrics.SourceCounts.Add(new SourceCount("GitHub Changelog", changelogVsCodeEntries.Count, "Copilot entries mentioning VS Code"));
-        metrics.SourceCounts.Add(new SourceCount("GitHub Blog", githubBlogVsCodeEntries.Count, "Posts mentioning VS Code"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "VS Code Insiders",
+            $"{releaseNotesResult?.CandidateUrlCount ?? 0} files",
+            $"{releaseNotesResult?.MatchedSectionCount ?? 0} sections",
+            $"{releaseNotesResult?.UniqueFeatureCount ?? 0} features",
+            $"{releaseNotesResult?.SuccessfulUrlCount ?? 0} files parsed successfully"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "VS Code Blog",
+            (vscodeBlogResult?.TotalItems ?? 0).ToString(),
+            (vscodeBlogResult?.InRangeItems ?? 0).ToString(),
+            vscodeMentionEntries.Count.ToString(),
+            "Posts mentioning VS Code"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "GitHub Changelog",
+            (changelogResult?.TotalItems ?? 0).ToString(),
+            (changelogResult?.InRangeItems ?? 0).ToString(),
+            changelogVsCodeEntries.Count.ToString(),
+            "Copilot entries mentioning VS Code"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "GitHub Blog",
+            (githubBlogResult?.TotalItems ?? 0).ToString(),
+            (githubBlogResult?.InRangeItems ?? 0).ToString(),
+            githubBlogVsCodeEntries.Count.ToString(),
+            "Posts mentioning VS Code"));
 
         if (releaseNotes == null ||
             (releaseNotes.Features.Count == 0 &&
@@ -859,34 +1100,42 @@ internal static class NewsletterApp
         string content = string.Empty;
         string title = defaultTitle;
 
-        var generationStopwatch = Stopwatch.StartNew();
         await AnsiConsole.Progress().AutoClear(false).HideCompleted(false).StartAsync(async ctx =>
         {
-            var sectionTask = ctx.AddTask("[cornflowerblue]Generate newsletter content[/]", maxValue: 100);
-            var titleTask = ctx.AddTask("[cornflowerblue]Generate title[/]", maxValue: 100);
+            const string sectionLabel = "Generate newsletter content";
+            const string titleLabel = "Generate title";
 
-            content = await newsletterService.GenerateVsCodeNewsletterAsync(
-                releaseNotes,
-                vscodeMentionEntries,
-                changelogVsCodeEntries,
-                githubBlogVsCodeEntries,
-                weekStart,
-                weekEnd,
-                cache,
-                selectedModel);
-            sectionTask.Increment(100);
+            var sectionTask = AddInactiveTask(ctx, sectionLabel);
+            var titleTask = AddInactiveTask(ctx, titleLabel);
+
+            content = await RunTrackedTaskAsync(
+                sectionTask,
+                sectionLabel,
+                () => newsletterService.GenerateVsCodeNewsletterAsync(
+                    releaseNotes,
+                    vscodeMentionEntries,
+                    changelogVsCodeEntries,
+                    githubBlogVsCodeEntries,
+                    weekStart,
+                    weekEnd,
+                    cache,
+                    selectedModel),
+                metrics,
+                "Generate: VS Code newsletter");
 
             var welcomeSummary = ExtractWelcomeSummary(content);
             var newsletterLabel = GetNewsletterLabel(NewsletterType.VSCode);
-            title = await newsletterService.GenerateNewsletterTitleAsync(
-                welcomeSummary,
-                newsletterLabel,
-                cache,
-                selectedModel);
-            titleTask.Increment(100);
+            title = await RunTrackedTaskAsync(
+                titleTask,
+                titleLabel,
+                () => newsletterService.GenerateNewsletterTitleAsync(
+                    welcomeSummary,
+                    newsletterLabel,
+                    cache,
+                    selectedModel),
+                metrics,
+                "Generate: Newsletter title");
         });
-        generationStopwatch.Stop();
-        metrics.StageSeconds["Generate content"] = generationStopwatch.Elapsed.TotalSeconds;
 
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -941,39 +1190,65 @@ internal static class NewsletterApp
         List<ReleaseEntry> sdkReleases = [];
         List<ReleaseEntry> changelogEntries = [];
         List<ReleaseEntry> blogEntries = [];
+        FeedFetchResult? cliFetchResult = null;
+        FeedFetchResult? sdkFetchResult = null;
+        FeedFetchResult? changelogFetchResult = null;
+        FeedFetchResult? blogFetchResult = null;
 
-        var fetchStopwatch = Stopwatch.StartNew();
         await AnsiConsole.Progress().AutoClear(false).HideCompleted(false).StartAsync(async ctx =>
         {
-            var cliTask = ctx.AddTask("[cornflowerblue]Copilot CLI releases[/]", maxValue: 100);
-            var sdkTask = ctx.AddTask("[cornflowerblue]Copilot SDK releases[/]", maxValue: 100);
-            var changelogTask = ctx.AddTask("[cornflowerblue]Copilot changelog feed[/]", maxValue: 100);
-            var blogTask = ctx.AddTask("[cornflowerblue]GitHub blog feed[/]", maxValue: 100);
+            const string cliLabel = "Copilot CLI releases";
+            const string sdkLabel = "Copilot SDK releases";
+            const string changelogLabel = "Copilot changelog feed";
+            const string blogLabel = "GitHub blog feed";
 
-            cliReleases = await feedService.FetchFeedAsync(CliAtomUrl, weekStart, weekEnd);
-            cliTask.Increment(100);
+            var cliTask = AddInactiveTask(ctx, cliLabel);
+            var sdkTask = AddInactiveTask(ctx, sdkLabel);
+            var changelogTask = AddInactiveTask(ctx, changelogLabel);
+            var blogTask = AddInactiveTask(ctx, blogLabel);
 
-            sdkReleases = await feedService.FetchFeedAsync(SdkAtomUrl, weekStart, weekEnd);
-            sdkTask.Increment(100);
+            cliFetchResult = await RunTrackedTaskAsync(
+                cliTask,
+                cliLabel,
+                () => feedService.FetchFeedWithMetricsAsync(CliAtomUrl, weekStart, weekEnd),
+                metrics,
+                "Fetch: Copilot CLI releases");
+            cliReleases = cliFetchResult.Entries;
 
-            changelogEntries = await feedService.FetchFeedAsync(
-                ChangelogCopilotUrl,
-                weekStart,
-                weekEnd,
-                maxContentChars: 1500);
-            changelogTask.Increment(100);
+            sdkFetchResult = await RunTrackedTaskAsync(
+                sdkTask,
+                sdkLabel,
+                () => feedService.FetchFeedWithMetricsAsync(SdkAtomUrl, weekStart, weekEnd),
+                metrics,
+                "Fetch: Copilot SDK releases");
+            sdkReleases = sdkFetchResult.Entries;
 
-            blogEntries = await feedService.FetchFeedAsync(
-                BlogUrl,
-                weekStart,
-                weekEnd,
-                categoryKeywords: ["copilot", "github copilot cli", "github cli"],
-                preferShortSummary: true,
-                maxContentChars: 800);
-            blogTask.Increment(100);
+            changelogFetchResult = await RunTrackedTaskAsync(
+                changelogTask,
+                changelogLabel,
+                () => feedService.FetchFeedWithMetricsAsync(
+                    ChangelogCopilotUrl,
+                    weekStart,
+                    weekEnd,
+                    maxContentChars: 1500),
+                metrics,
+                "Fetch: Copilot changelog");
+            changelogEntries = changelogFetchResult.Entries;
+
+            blogFetchResult = await RunTrackedTaskAsync(
+                blogTask,
+                blogLabel,
+                () => feedService.FetchFeedWithMetricsAsync(
+                    BlogUrl,
+                    weekStart,
+                    weekEnd,
+                    categoryKeywords: ["copilot", "github copilot cli", "github cli"],
+                    preferShortSummary: true,
+                    maxContentChars: 800),
+                metrics,
+                "Fetch: GitHub blog");
+            blogEntries = blogFetchResult.Entries;
         });
-        fetchStopwatch.Stop();
-        metrics.StageSeconds["Fetch sources"] = fetchStopwatch.Elapsed.TotalSeconds;
 
         var cliPreCount = cliReleases.Count;
         var sdkPreCount = sdkReleases.Count;
@@ -983,10 +1258,30 @@ internal static class NewsletterApp
         log.LogInformation("ConsolidatePrereleases: CLI {Before}->{After}, SDK {SdkBefore}->{SdkAfter}",
             cliPreCount, cliReleases.Count, sdkPreCount, sdkReleases.Count);
 
-        metrics.SourceCounts.Add(new SourceCount("Copilot CLI releases", cliReleases.Count, "After prerelease consolidation"));
-        metrics.SourceCounts.Add(new SourceCount("Copilot SDK releases", sdkReleases.Count, "After prerelease consolidation"));
-        metrics.SourceCounts.Add(new SourceCount("Changelog (Copilot)", changelogEntries.Count, "Feed items"));
-        metrics.SourceCounts.Add(new SourceCount("Blog (Copilot/CLI)", blogEntries.Count, "Filtered by category"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "Copilot CLI releases",
+            (cliFetchResult?.TotalItems ?? 0).ToString(),
+            (cliFetchResult?.InRangeItems ?? 0).ToString(),
+            cliReleases.Count.ToString(),
+            $"{cliFetchResult?.MatchedItems ?? 0} matched before prerelease consolidation"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "Copilot SDK releases",
+            (sdkFetchResult?.TotalItems ?? 0).ToString(),
+            (sdkFetchResult?.InRangeItems ?? 0).ToString(),
+            sdkReleases.Count.ToString(),
+            $"{sdkFetchResult?.MatchedItems ?? 0} matched before prerelease consolidation"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "Changelog (Copilot)",
+            (changelogFetchResult?.TotalItems ?? 0).ToString(),
+            (changelogFetchResult?.InRangeItems ?? 0).ToString(),
+            changelogEntries.Count.ToString(),
+            "Feed items"));
+        metrics.SourceCounts.Add(new SourceCount(
+            "Blog (Copilot/CLI)",
+            (blogFetchResult?.TotalItems ?? 0).ToString(),
+            (blogFetchResult?.InRangeItems ?? 0).ToString(),
+            blogEntries.Count.ToString(),
+            "Filtered by category"));
 
         static string CountCell(int n) => n == 0 ? "[dim]0[/]" : $"[green]{n}[/]";
         static string ItemsCell(IEnumerable<ReleaseEntry> entries, int max = 3)
@@ -1048,55 +1343,77 @@ internal static class NewsletterApp
         string welcomeSummary = string.Empty;
 
         var newsletterService = new NewsletterService(loggerFactory.CreateLogger<NewsletterService>());
-        var generationStopwatch = Stopwatch.StartNew();
-
         await AnsiConsole.Progress().AutoClear(false).HideCompleted(false).StartAsync(async ctx =>
         {
-            var newsTask = ctx.AddTask("[cornflowerblue]News and announcements[/]", maxValue: 100);
-            var releaseTask = ctx.AddTask("[cornflowerblue]Project updates[/]", maxValue: 100);
-            var welcomeTask = ctx.AddTask("[cornflowerblue]Welcome summary[/]", maxValue: 100);
-            var titleTask = ctx.AddTask("[cornflowerblue]Newsletter title[/]", maxValue: 100);
+            const string newsLabel = "News and announcements";
+            const string releaseLabel = "Project updates";
+            const string welcomeLabel = "Welcome summary";
+            const string titleLabel = "Newsletter title";
+
+            var newsTask = AddInactiveTask(ctx, newsLabel);
+            var releaseTask = AddInactiveTask(ctx, releaseLabel);
+            var welcomeTask = AddInactiveTask(ctx, welcomeLabel);
+            var titleTask = AddInactiveTask(ctx, titleLabel);
 
             try
             {
-                if (changelogEntries.Count > 0 || blogEntries.Count > 0)
-                {
-                    newsSection = await newsletterService.GenerateNewsAndAnnouncementsAsync(
+                var newsSectionTask = (changelogEntries.Count > 0 || blogEntries.Count > 0)
+                    ? RunTrackedTaskAsync(
+                        newsTask,
+                        newsLabel,
+                        () => newsletterService.GenerateNewsAndAnnouncementsAsync(
                         changelogEntries,
                         blogEntries,
                         weekStart,
                         weekEnd,
                         cache,
-                        selectedModel);
-                }
-                newsTask.Increment(100);
+                        selectedModel),
+                        metrics,
+                        "Generate: News and announcements")
+                    : Task.FromResult(string.Empty);
 
-                releaseSection = await newsletterService.GenerateReleaseSectionAsync(
+                var releaseSectionTask = RunTrackedTaskAsync(
+                    releaseTask,
+                    releaseLabel,
+                    () => newsletterService.GenerateReleaseSectionAsync(
                     cliReleases,
                     sdkReleases,
                     weekStart,
                     weekEnd,
                     cache,
-                    selectedModel);
-                releaseTask.Increment(100);
+                    selectedModel),
+                    metrics,
+                    "Generate: Project updates");
+
+                newsSection = await newsSectionTask;
+
+                releaseSection = await releaseSectionTask;
 
                 var releaseSummaryBullets = ExtractTLDRBullets(releaseSection);
-                welcomeSummary = await newsletterService.GenerateWelcomeSummaryAsync(
-                    newsSection,
-                    releaseSummaryBullets,
-                    weekStart,
-                    weekEnd,
-                    cache,
-                    selectedModel);
-                welcomeTask.Increment(100);
+                welcomeSummary = await RunTrackedTaskAsync(
+                    welcomeTask,
+                    welcomeLabel,
+                    () => newsletterService.GenerateWelcomeSummaryAsync(
+                        newsSection,
+                        releaseSummaryBullets,
+                        weekStart,
+                        weekEnd,
+                        cache,
+                        selectedModel),
+                    metrics,
+                    "Generate: Welcome summary");
 
                 var newsletterLabel = GetNewsletterLabel(NewsletterType.CopilotCliSdk);
-                defaultTitle = await newsletterService.GenerateNewsletterTitleAsync(
-                    welcomeSummary,
-                    newsletterLabel,
-                    cache,
-                    selectedModel);
-                titleTask.Increment(100);
+                defaultTitle = await RunTrackedTaskAsync(
+                    titleTask,
+                    titleLabel,
+                    () => newsletterService.GenerateNewsletterTitleAsync(
+                        welcomeSummary,
+                        newsletterLabel,
+                        cache,
+                        selectedModel),
+                    metrics,
+                    "Generate: Newsletter title");
             }
             catch (Exception ex)
             {
@@ -1104,9 +1421,6 @@ internal static class NewsletterApp
                 RenderFriendlyException(ex, debug);
             }
         });
-
-        generationStopwatch.Stop();
-        metrics.StageSeconds["Generate content"] = generationStopwatch.Elapsed.TotalSeconds;
 
         if (string.IsNullOrEmpty(releaseSection))
         {
@@ -1149,17 +1463,57 @@ internal static class NewsletterApp
 
         return startDir;
     }
+
+    private static int CountSections(string content)
+    {
+        var headingCount = content.Split('\n')
+            .Count(line => line.StartsWith("## ", StringComparison.Ordinal) || line.StartsWith("### ", StringComparison.Ordinal));
+
+        return headingCount + 1; // Include the welcome section.
+    }
+
+    private static async Task<T> RunTrackedTaskAsync<T>(
+        ProgressTask task,
+        string label,
+        Func<Task<T>> work,
+        RunMetrics? metrics = null,
+        string? stageKey = null)
+    {
+        SetTaskActive(task, label);
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            var result = await work();
+            task.Increment(100);
+            stopwatch.Stop();
+            if (!string.IsNullOrWhiteSpace(stageKey))
+                metrics?.StageSeconds.TryAdd(stageKey, stopwatch.Elapsed.TotalSeconds);
+            return result;
+        }
+        finally
+        {
+            SetTaskInactive(task, label);
+        }
+    }
 }
 
 internal sealed class RunMetrics
 {
     public List<SourceCount> SourceCounts { get; } = [];
     public Dictionary<string, double> StageSeconds { get; } = [];
+    public List<string> Warnings { get; } = [];
     public int CacheHits { get; set; }
     public int CacheMisses { get; set; }
     public int CacheSkips { get; set; }
+    public IReadOnlyList<CacheSectionMetric> CacheSections { get; set; } = [];
+    public double TotalWallSeconds { get; set; }
     public bool OverwroteOutput { get; set; }
     public string? OutputPath { get; set; }
+    public int OutputCharacters { get; set; }
+    public int OutputLines { get; set; }
+    public int OutputSections { get; set; }
+    public bool StreamingEnabled { get; set; } = true;
+    public string ReasoningEffort { get; set; } = "low";
 }
 
-internal sealed record SourceCount(string Source, int Count, string Notes);
+internal sealed record SourceCount(string Source, string RawCount, string FilteredCount, string FinalCount, string Notes);
