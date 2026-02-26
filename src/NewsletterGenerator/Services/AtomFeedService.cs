@@ -25,10 +25,10 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         bool preferShortSummary = false,
         int maxContentChars = 0)
     {
-        logger.LogInformation("Fetching feed: {Url} (range {Start} to {End})", feedUrl, startDate, endDate);
+        ServiceLogMessages.FetchingFeed(logger, feedUrl, startDate, endDate);
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
         var xml = await _http.GetStringAsync(feedUrl);
-        logger.LogDebug("Feed response: {Length} chars", xml.Length);
+        ServiceLogMessages.FeedResponseLength(logger, xml.Length);
 
         using var stringReader = new StringReader(xml);
         using var xmlReader = XmlReader.Create(stringReader);
@@ -56,7 +56,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
 
             if (pubDate < startDate || pubDate > endDate)
             {
-                logger.LogDebug("  Skipped (date {Date} outside {Start}-{End}): {Title}",
+                ServiceLogMessages.FeedItemSkippedDate(logger,
                     pubDate, startDate, endDate, item.Title?.Text?.Trim());
                 skippedDate++;
                 continue;
@@ -70,7 +70,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
                                .ToList();
                 if (!cats.Any(c => keywords.Any(k => c.Contains(k))))
                 {
-                    logger.LogDebug("  Skipped (category mismatch, cats=[{Categories}]): {Title}",
+                    ServiceLogMessages.FeedItemSkippedCategory(logger,
                         string.Join(", ", cats), item.Title?.Text?.Trim());
                     skippedCategory++;
                     continue;
@@ -100,10 +100,10 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             .OrderByDescending(e => e.PublishedAt)
             .ToList();
 
-        logger.LogInformation("Feed {Url}: {Total} items in feed, {Matched} matched, {SkippedDate} skipped (date), {SkippedCat} skipped (category)",
-            feedUrl, totalItems, result.Count, skippedDate, skippedCategory);
+        ServiceLogMessages.FeedSummary(
+            logger, feedUrl, totalItems, result.Count, skippedDate, skippedCategory);
         foreach (var entry in result)
-            logger.LogDebug("  Entry: {Version} ({Date}, {TextLength} chars)", entry.Version, entry.PublishedAt, entry.PlainText.Length);
+            ServiceLogMessages.FeedEntry(logger, entry.Version, entry.PublishedAt, entry.PlainText.Length);
 
         return result;
     }

@@ -359,7 +359,7 @@ static async Task<(bool success, string standardOutput, string standardError, in
 
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
-        process.WaitForExit();
+        await process.WaitForExitAsync();
 
         var standardOutput = (await stdoutTask).Trim();
         var standardError = (await stderrTask).Trim();
