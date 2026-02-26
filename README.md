@@ -19,7 +19,11 @@ At startup, you'll choose:
 - **Copilot model** - The model used for newsletter generation prompts
 - **Cache behavior** - Use cache, clear cache, or force refresh for the run
 
-While loading model choices, the app shows a spinner/status animation while querying available models.
+The console UI now includes:
+
+- **Progress tasks** for feed fetch and generation stages
+- **Run Review** confirmation before generation
+- **Run Dashboard** summary with source counts, cache stats, and stage durations
 
 The output is a markdown newsletter with these main sections:
 
@@ -34,7 +38,7 @@ At startup, the tool asks how many days back to include (default: **7**).
 - End date is always today
 - Start date is today minus the selected number of days
 
-You can still pass a numeric CLI argument to skip the prompt.
+You can pass `daysBack` as a command argument to skip the prompt.
 
 ## Usage
 
@@ -47,47 +51,86 @@ dotnet run
 
 This generates a newsletter using the automatic date logic described above.
 
-### Command-line options
+### Commands
+
+```bash
+dotnet run -- generate
+dotnet run -- list-models
+dotnet run -- doctor
+dotnet run -- clear-cache
+```
+
+`generate` is the default command, so `dotnet run -- ...options...` works without explicitly typing `generate`.
+
+### Generate options
 
 **Clear cache and regenerate everything:**
 
 ```bash
-dotnet run --clear-cache
-dotnet run -c
+dotnet run -- --clear-cache
+dotnet run -- -c
 ```
 
 **Force refresh (ignore cache reads this run):**
 
 ```bash
-dotnet run --force-refresh
-dotnet run -f
+dotnet run -- --force-refresh
+dotnet run -- -f
 ```
 
 **Custom date range (N days back from today):**
 
 ```bash
-dotnet run 7              # Last 7 days ending today
-dotnet run 14             # Last 14 days ending today
+dotnet run -- 7              # Last 7 days ending today
+dotnet run -- 14             # Last 14 days ending today
 ```
 
 **Combine flags:**
 
 ```bash
-dotnet run --clear-cache 7    # Clear cache and generate for last 7 days
+dotnet run -- --clear-cache 7
 ```
 
 **Choose newsletter type via CLI:**
 
 ```bash
-dotnet run --newsletter copilot
-dotnet run --newsletter vscode
+dotnet run -- --newsletter copilot
+dotnet run -- --newsletter vscode
 ```
 
 **Choose model via CLI:**
 
 ```bash
-dotnet run --model gpt-5.3-codex
-dotnet run --model gpt-4.1
+dotnet run -- --model gpt-5.3-codex
+dotnet run -- --model gpt-4.1
+```
+
+**Skip the pre-run confirmation prompt:**
+
+```bash
+dotnet run -- --yes
+```
+
+**Show full exception details:**
+
+```bash
+dotnet run -- --debug
+```
+
+### Non-interactive mode
+
+Use non-interactive mode for redirected output, scripts, or CI.
+
+Required in `--non-interactive` mode:
+
+- `--newsletter`
+- `--model`
+- `daysBack`
+
+Example:
+
+```bash
+dotnet run -- --non-interactive --newsletter copilot --model gpt-5.3-codex --force-refresh 7
 ```
 
 ### Output
@@ -95,13 +138,13 @@ dotnet run --model gpt-4.1
 Generated newsletters are saved to:
 
 ```
-src/NewsletterGenerator/output/newsletter-copilot-cli-sdk-YYYY-MM-DD.md
-src/NewsletterGenerator/output/newsletter-vscode-insiders-YYYY-MM-DD.md
+output/newsletter-copilot-cli-sdk-YYYY-MM-DD.md
+output/newsletter-vscode-insiders-YYYY-MM-DD.md
 ```
 
 The filename uses the end date of the coverage period and includes the newsletter slug.
 
-After each generation run, the app prompts whether to start again from the beginning (new newsletter/model/options selection).
+After each interactive generation run, the app prompts whether to start again from the beginning.
 
 ## Caching
 
@@ -110,7 +153,7 @@ The tool caches:
 - Feed data (atom/RSS feeds)
 - Generated summaries for each section
 
-Cache files are stored in `.cache/` and use SHA256 hashing to detect changes in source data. When source data changes, that section is regenerated. Use `--clear-cache` to force regeneration of all content.
+Cache files are stored in a `.cache/` directory under the process working directory and use SHA256 hashing to detect changes in source data. When you follow the run instructions (`cd src/NewsletterGenerator && dotnet run`), this resolves to `src/NewsletterGenerator/.cache/`. If you run the app from another directory (for example from the repo root), the cache will be created in that directory instead (for example `./.cache/`). When source data changes, that section is regenerated. Use `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
 
 ## Configuration
 

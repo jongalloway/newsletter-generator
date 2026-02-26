@@ -9,6 +9,10 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     private readonly string _cacheDir = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), ".cache");
     private readonly bool _forceRefresh = forceRefresh;
 
+    public int CacheHits { get; private set; }
+    public int CacheMisses { get; private set; }
+    public int CacheSkips { get; private set; }
+
     // Ensure directory exists on first use
     private void EnsureCacheDirectory() => Directory.CreateDirectory(_cacheDir);
 
@@ -28,6 +32,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     {
         if (_forceRefresh)
         {
+            CacheSkips++;
             ServiceLogMessages.CacheSkipForceRefresh(logger, cacheKey);
             return null;
         }
@@ -37,6 +42,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
         if (!File.Exists(cacheFile))
         {
+            CacheMisses++;
             ServiceLogMessages.CacheMissNoFile(logger, cacheKey);
             return null;
         }
@@ -48,14 +54,17 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
             if (cached?.SourceHash == sourceHash)
             {
+                CacheHits++;
                 ServiceLogMessages.CacheHit(logger, cacheKey, sourceHash[..12], cached.Content.Length);
                 return cached.Content;
             }
 
+            CacheMisses++;
             ServiceLogMessages.CacheMissHashMismatch(logger, cacheKey, sourceHash[..12], cached?.SourceHash?[..12]);
         }
         catch (Exception ex)
         {
+            CacheMisses++;
             ServiceLogMessages.CacheReadFailed(logger, ex, cacheKey);
         }
 
