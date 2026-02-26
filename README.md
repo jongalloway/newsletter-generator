@@ -153,7 +153,7 @@ The tool caches:
 - Feed data (atom/RSS feeds)
 - Generated summaries for each section
 
-Cache files are stored in `src/NewsletterGenerator/.cache/` and use SHA256 hashing to detect changes in source data. When source data changes, that section is regenerated. Use `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
+Cache files are stored in a `.cache/` directory under the process working directory and use SHA256 hashing to detect changes in source data. When you follow the run instructions (`cd src/NewsletterGenerator && dotnet run`), this resolves to `src/NewsletterGenerator/.cache/`. If you run the app from another directory (for example from the repo root), the cache will be created in that directory instead (for example `./.cache/`). When source data changes, that section is regenerated. Use `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
 
 ## Configuration
 
