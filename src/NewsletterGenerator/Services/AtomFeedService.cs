@@ -25,6 +25,25 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         bool preferShortSummary = false,
         int maxContentChars = 0)
     {
+        var result = await FetchFeedWithMetricsAsync(
+            feedUrl,
+            startDate,
+            endDate,
+            categoryKeywords,
+            preferShortSummary,
+            maxContentChars);
+
+        return result.Entries;
+    }
+
+    public async Task<FeedFetchResult> FetchFeedWithMetricsAsync(
+        string feedUrl,
+        DateOnly startDate,
+        DateOnly endDate,
+        IEnumerable<string>? categoryKeywords = null,
+        bool preferShortSummary = false,
+        int maxContentChars = 0)
+    {
         ServiceLogMessages.FetchingFeed(logger, feedUrl, startDate, endDate);
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
         var xml = await _http.GetStringAsync(feedUrl);
@@ -105,7 +124,13 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         foreach (var entry in result)
             ServiceLogMessages.FeedEntry(logger, entry.Version, entry.PublishedAt, entry.PlainText.Length);
 
-        return result;
+        return new FeedFetchResult(
+            result,
+            totalItems,
+            totalItems - skippedDate,
+            result.Count,
+            skippedDate,
+            skippedCategory);
     }
 
     // ── Content extraction ────────────────────────────────────────────────────
@@ -342,3 +367,11 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             _ => lang
         };
 }
+
+public sealed record FeedFetchResult(
+    List<ReleaseEntry> Entries,
+    int TotalItems,
+    int InRangeItems,
+    int MatchedItems,
+    int SkippedDateItems,
+    int SkippedCategoryItems);

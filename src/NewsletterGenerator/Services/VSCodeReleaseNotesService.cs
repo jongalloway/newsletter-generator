@@ -30,6 +30,12 @@ public partial class VSCodeReleaseNotesService
 
     public async Task<VSCodeReleaseNotes?> GetReleaseNotesForDateRangeAsync(DateOnly startDate, DateOnly endDate)
     {
+        var result = await GetReleaseNotesFetchResultForDateRangeAsync(startDate, endDate);
+        return result.ReleaseNotes;
+    }
+
+    public async Task<VSCodeReleaseNotesFetchResult> GetReleaseNotesFetchResultForDateRangeAsync(DateOnly startDate, DateOnly endDate)
+    {
         if (startDate > endDate)
             (startDate, endDate) = (endDate, startDate);
 
@@ -43,6 +49,8 @@ public partial class VSCodeReleaseNotesService
         var allFeatures = new List<VSCodeFeature>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         string? versionUrl = null;
+        var successfulUrls = 0;
+        var matchedSections = 0;
 
         foreach (var url in candidateUrls)
         {
@@ -52,9 +60,15 @@ public partial class VSCodeReleaseNotesService
                 if (!ValidateFrontMatter(markdown))
                     continue;
 
+                successfulUrls++;
+
                 var sections = ParseMarkdownSections(markdown, endDate.Year);
-                var features = sections
+                var matchingSections = sections
                     .Where(s => s.Date >= startDate && s.Date <= endDate)
+                    .ToList();
+                matchedSections += matchingSections.Count;
+
+                var features = matchingSections
                     .SelectMany(s => s.Features)
                     .ToList();
 
@@ -78,12 +92,24 @@ public partial class VSCodeReleaseNotesService
         }
 
         if (allFeatures.Count == 0)
-            return null;
+        {
+            return new VSCodeReleaseNotesFetchResult(
+                null,
+                candidateUrls.Count,
+                successfulUrls,
+                matchedSections,
+                0);
+        }
 
-        return new VSCodeReleaseNotes(
-            Date: endDate,
-            Features: allFeatures,
-            VersionUrl: versionUrl ?? candidateUrls.First());
+        return new VSCodeReleaseNotesFetchResult(
+            new VSCodeReleaseNotes(
+                Date: endDate,
+                Features: allFeatures,
+                VersionUrl: versionUrl ?? candidateUrls.First()),
+            candidateUrls.Count,
+            successfulUrls,
+            matchedSections,
+            allFeatures.Count);
     }
 
     [GeneratedRegex(@"^##\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,\s*(\d{4}))?", RegexOptions.IgnoreCase)]
@@ -351,3 +377,10 @@ public partial class VSCodeReleaseNotesService
         public List<VSCodeFeature> Features { get; } = [];
     }
 }
+
+public sealed record VSCodeReleaseNotesFetchResult(
+    VSCodeReleaseNotes? ReleaseNotes,
+    int CandidateUrlCount,
+    int SuccessfulUrlCount,
+    int MatchedSectionCount,
+    int UniqueFeatureCount);

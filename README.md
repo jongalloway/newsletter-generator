@@ -171,3 +171,18 @@ Filtering rules and summarization prompts can be modified in:
 
 - `Services/AtomFeedService.cs` - Regex filters for release notes
 - `Services/NewsletterService.cs` - AI prompts and generation logic
+
+## GitHub Copilot SDK features used
+
+This project uses the [GitHub.Copilot.SDK](https://www.nuget.org/packages/GitHub.Copilot.SDK) NuGet package and exercises these SDK features:
+
+| Feature | Where | Why |
+|-|-|-|
+| **Streaming** | All AI sessions (`Streaming = true`) | Enables incremental response delivery; delta events are logged for diagnostics |
+| **ReasoningEffort** | All AI sessions (`ReasoningEffort = "low"`) | Summarization prompts don't need deep chain-of-thought; reduces latency |
+| **Session hooks** | `OnErrorOccurred`, `OnSessionStart`, `OnSessionEnd` | SDK-level error retry and session lifecycle logging without manual plumbing |
+| **PingAsync** | `doctor` command + startup status | Lightweight connectivity check without creating a full session |
+| **ListModelsAsync** | Model selection, `list-models` command | Enumerate available models for interactive selection |
+| **System messages** | `SystemMessageMode.Replace` on all sessions | Full control over system prompt for editorial tone and output formatting |
+| **Event-driven responses** | `AssistantMessageEvent`, `AssistantMessageDeltaEvent`, `SessionIdleEvent`, `SessionErrorEvent` | Collect final responses and streaming deltas via pattern matching |
+| **GetAuthStatusAsync** | Startup status table | Display authentication state before generation |

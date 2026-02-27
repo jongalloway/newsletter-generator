@@ -7,6 +7,28 @@ namespace NewsletterGenerator.Services;
 
 public class NewsletterService(ILogger<NewsletterService> logger)
 {
+    private SessionHooks CreateSessionHooks() => new()
+    {
+        OnErrorOccurred = (input, invocation) =>
+        {
+            logger.LogWarning("Session error in {Context}: {Error}", input.ErrorContext, input.Error);
+            return Task.FromResult<ErrorOccurredHookOutput?>(new ErrorOccurredHookOutput
+            {
+                ErrorHandling = "retry"
+            });
+        },
+        OnSessionStart = (input, invocation) =>
+        {
+            logger.LogDebug("Session started (source={Source})", input.Source);
+            return Task.FromResult<SessionStartHookOutput?>(new SessionStartHookOutput());
+        },
+        OnSessionEnd = (input, invocation) =>
+        {
+            logger.LogDebug("Session ended (reason={Reason})", input.Reason);
+            return Task.FromResult<SessionEndHookOutput?>(null);
+        }
+    };
+
     public async Task<string> GenerateWelcomeSummaryAsync(
         string newsSection,
         string releaseSummaryBullets,
@@ -40,6 +62,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
             Model = model,
+            Streaming = true,
+            ReasoningEffort = "low",
+            Hooks = CreateSessionHooks(),
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -123,6 +148,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
             Model = model,
+            Streaming = true,
+            ReasoningEffort = "low",
+            Hooks = CreateSessionHooks(),
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -193,6 +221,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
             Model = model,
+            Streaming = true,
+            ReasoningEffort = "low",
+            Hooks = CreateSessionHooks(),
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -301,6 +332,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
             await using var session = await client.CreateSessionAsync(new SessionConfig
             {
                 Model = model,
+                Streaming = true,
+                ReasoningEffort = "low",
+                Hooks = CreateSessionHooks(),
                 SystemMessage = new SystemMessageConfig
                 {
                     Mode = SystemMessageMode.Replace,
@@ -420,6 +454,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         await using var session = await client.CreateSessionAsync(new SessionConfig
         {
             Model = model,
+            Streaming = true,
+            ReasoningEffort = "low",
+            Hooks = CreateSessionHooks(),
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -502,6 +539,7 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         logger.LogDebug("SendPromptAsync: sending prompt ({Length} chars)", prompt.Length);
         var response = new StringBuilder();
         var eventCount = 0;
+        var streamedChars = 0;
         var tcs = new TaskCompletionSource<string>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -509,6 +547,15 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         {
             switch (evt)
             {
+                case AssistantMessageDeltaEvent delta:
+                    var deltaContent = delta.Data.DeltaContent;
+                    if (!string.IsNullOrEmpty(deltaContent))
+                    {
+                        streamedChars += deltaContent.Length;
+                        logger.LogTrace("Streaming delta: +{Len} chars (total streamed={Total})",
+                            deltaContent.Length, streamedChars);
+                    }
+                    break;
                 case AssistantMessageEvent msg:
                     eventCount++;
                     var contentLen = msg.Data.Content?.Length ?? 0;
@@ -524,7 +571,8 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                     }
                     break;
                 case SessionIdleEvent:
-                    logger.LogDebug("SessionIdleEvent received after {Count} message events", eventCount);
+                    logger.LogDebug("SessionIdleEvent received after {Count} message events, {StreamedChars} streamed chars",
+                        eventCount, streamedChars);
                     tcs.TrySetResult(response.ToString());
                     break;
                 case SessionErrorEvent err:
@@ -536,8 +584,8 @@ public class NewsletterService(ILogger<NewsletterService> logger)
 
         await session.SendAsync(new MessageOptions { Prompt = prompt });
         var result = await tcs.Task;
-        logger.LogInformation("SendPromptAsync: received response ({Length} chars, empty={IsEmpty}, events={Events})",
-            result.Length, string.IsNullOrWhiteSpace(result), eventCount);
+        logger.LogInformation("SendPromptAsync: received response ({Length} chars, empty={IsEmpty}, events={Events}, streamedChars={StreamedChars})",
+            result.Length, string.IsNullOrWhiteSpace(result), eventCount, streamedChars);
         if (string.IsNullOrWhiteSpace(result))
             logger.LogWarning("SendPromptAsync: AI returned empty response for prompt starting with: {PromptStart}",
                 prompt.Length > 200 ? prompt[..200] : prompt);
