@@ -151,20 +151,6 @@ internal sealed class DoctorCommand : AsyncCommand<CommandSettings>
         var models = await NewsletterApp.PrintCopilotStartupStatusAsync();
         var healthy = models != null && models.Count > 0;
 
-        // Lightweight connectivity ping
-        try
-        {
-            await using var client = new CopilotClient();
-            await client.StartAsync();
-            var ping = await client.PingAsync();
-            AnsiConsole.MarkupLine($"[green]✓[/] Ping: OK");
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[yellow]⚠[/] Ping failed: {Markup.Escape(ex.Message)}");
-            healthy = false;
-        }
-
         if (healthy)
             AnsiConsole.MarkupLine("[green]Environment checks passed.[/]");
         else
@@ -1385,6 +1371,8 @@ internal static class NewsletterApp
                     metrics,
                     "Generate: Project updates");
 
+                await Task.WhenAll(newsSectionTask, releaseSectionTask);
+
                 newsSection = await newsSectionTask;
 
                 releaseSection = await releaseSectionTask;
@@ -1466,10 +1454,26 @@ internal static class NewsletterApp
 
     private static int CountSections(string content)
     {
-        var headingCount = content.Split('\n')
+        var lines = content.Split('\n');
+
+        var headingCount = lines
             .Count(line => line.StartsWith("## ", StringComparison.Ordinal) || line.StartsWith("### ", StringComparison.Ordinal));
 
-        return headingCount + 1; // Include the welcome section.
+        // Treat any non-empty content before the first heading as a "welcome" section.
+        var hasWelcomeSection = false;
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("## ", StringComparison.Ordinal) || line.StartsWith("### ", StringComparison.Ordinal))
+                break;
+
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                hasWelcomeSection = true;
+                break;
+            }
+        }
+
+        return headingCount + (hasWelcomeSection ? 1 : 0);
     }
 
     private static async Task<T> RunTrackedTaskAsync<T>(

@@ -9,26 +9,23 @@ public class NewsletterService(ILogger<NewsletterService> logger)
 {
     private SessionHooks CreateSessionHooks() => new()
     {
-        OnErrorOccurred = async (input, invocation) =>
+        OnErrorOccurred = (input, invocation) =>
         {
             logger.LogWarning("Session error in {Context}: {Error}", input.ErrorContext, input.Error);
-            await Task.CompletedTask;
-            return new ErrorOccurredHookOutput
+            return Task.FromResult<ErrorOccurredHookOutput?>(new ErrorOccurredHookOutput
             {
                 ErrorHandling = "retry"
-            };
+            });
         },
-        OnSessionStart = async (input, invocation) =>
+        OnSessionStart = (input, invocation) =>
         {
             logger.LogDebug("Session started (source={Source})", input.Source);
-            await Task.CompletedTask;
-            return new SessionStartHookOutput();
+            return Task.FromResult<SessionStartHookOutput?>(new SessionStartHookOutput());
         },
-        OnSessionEnd = async (input, invocation) =>
+        OnSessionEnd = (input, invocation) =>
         {
             logger.LogDebug("Session ended (reason={Reason})", input.Reason);
-            await Task.CompletedTask;
-            return null;
+            return Task.FromResult<SessionEndHookOutput?>(null);
         }
     };
 

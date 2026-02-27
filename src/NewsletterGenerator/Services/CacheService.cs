@@ -11,9 +11,13 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     private readonly bool _forceRefresh = forceRefresh;
     private readonly ConcurrentDictionary<string, CacheSectionMetric> _sectionMetrics = new(StringComparer.OrdinalIgnoreCase);
 
-    public int CacheHits { get; private set; }
-    public int CacheMisses { get; private set; }
-    public int CacheSkips { get; private set; }
+    private int _cacheHits;
+    private int _cacheMisses;
+    private int _cacheSkips;
+
+    public int CacheHits => Volatile.Read(ref _cacheHits);
+    public int CacheMisses => Volatile.Read(ref _cacheMisses);
+    public int CacheSkips => Volatile.Read(ref _cacheSkips);
 
     public IReadOnlyList<CacheSectionMetric> GetSectionMetrics() =>
         _sectionMetrics.Values
@@ -39,7 +43,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     {
         if (_forceRefresh)
         {
-            CacheSkips++;
+            Interlocked.Increment(ref _cacheSkips);
             RecordReadOutcome(cacheKey, "skip");
             ServiceLogMessages.CacheSkipForceRefresh(logger, cacheKey);
             return null;
@@ -50,7 +54,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
         if (!File.Exists(cacheFile))
         {
-            CacheMisses++;
+            Interlocked.Increment(ref _cacheMisses);
             RecordReadOutcome(cacheKey, "miss");
             ServiceLogMessages.CacheMissNoFile(logger, cacheKey);
             return null;
@@ -63,19 +67,19 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
             if (cached?.SourceHash == sourceHash)
             {
-                CacheHits++;
+                Interlocked.Increment(ref _cacheHits);
                 RecordReadOutcome(cacheKey, "hit", cached.Content.Length);
                 ServiceLogMessages.CacheHit(logger, cacheKey, sourceHash[..12], cached.Content.Length);
                 return cached.Content;
             }
 
-            CacheMisses++;
+            Interlocked.Increment(ref _cacheMisses);
             RecordReadOutcome(cacheKey, "mismatch");
             ServiceLogMessages.CacheMissHashMismatch(logger, cacheKey, sourceHash[..12], cached?.SourceHash?[..12]);
         }
         catch (Exception ex)
         {
-            CacheMisses++;
+            Interlocked.Increment(ref _cacheMisses);
             RecordReadOutcome(cacheKey, "error");
             ServiceLogMessages.CacheReadFailed(logger, ex, cacheKey);
         }
