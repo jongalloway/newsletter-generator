@@ -53,7 +53,7 @@ flowchart LR
 
     subgraph App[Generation pipeline]
         INPUT[Date range + newsletter type + model]
-        CACHE[CacheService\nfeed cache + section cache]
+        CACHE[CacheService\nsection cache]
         PROMPTS[NewsletterService prompts]
         COPILOT[GitHub Copilot SDK\nCopilotClient + CopilotSession]
         SECTIONS[Welcome + News + Project Updates + Title]
