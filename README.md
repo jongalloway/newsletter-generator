@@ -23,13 +23,72 @@ The console UI now includes:
 
 - **Progress tasks** for feed fetch and generation stages
 - **Run Review** confirmation before generation
-- **Run Dashboard** summary with source counts, cache stats, and stage durations
+- **Run Dashboard** summary with source counts, cache stats, stage durations, and a release tree showing prereleases that were rolled up or skipped
 
 The output is a markdown newsletter with these main sections:
 
 - **Welcome** - Brief opening paragraph summarizing the week's highlights
 - **News and Announcements** - Curated changelog/blog items (for the Copilot CLI/SDK newsletter)
 - **Project Updates** - Product-specific release highlights
+
+## Information flow
+
+```mermaid
+flowchart LR
+    subgraph Sources[Public data sources]
+        CLI[Copilot CLI releases.atom]
+        SDK[Copilot SDK releases.atom]
+        CHG[GitHub Changelog feed]
+        BLOG[GitHub Blog feed]
+        VSCODE[VS Code Insiders release notes]
+        VSBLOG[VS Code blog feed]
+    end
+
+    subgraph Ingestion[Ingestion and normalization]
+        ATOM[AtomFeedService]
+        VS[VSCodeReleaseNotesService]
+        FILTER[HTML stripping and low-value filtering]
+        PRE[Prerelease consolidation]
+    end
+
+    subgraph App[Generation pipeline]
+        INPUT[Date range + newsletter type + model]
+        CACHE[CacheService\nfeed cache + section cache]
+        PROMPTS[NewsletterService prompts]
+        COPILOT[GitHub Copilot SDK\nCopilotClient + CopilotSession]
+        SECTIONS[Welcome + News + Project Updates + Title]
+    end
+
+    subgraph Output[Run results]
+        DASH[Console progress + run dashboard]
+        FILE[output/newsletter-...md]
+        LOGS[log/newsletter-{Date}.log]
+    end
+
+    CLI --> ATOM
+    SDK --> ATOM
+    CHG --> ATOM
+    BLOG --> ATOM
+    VSBLOG --> ATOM
+    VSCODE --> VS
+
+    ATOM --> FILTER
+    VS --> FILTER
+    FILTER --> PRE
+    INPUT --> CACHE
+    PRE --> CACHE
+    CACHE -->|cache hit| SECTIONS
+    CACHE -->|cache miss| PROMPTS
+    INPUT --> PROMPTS
+    PROMPTS --> COPILOT
+    COPILOT --> SECTIONS
+    SECTIONS --> CACHE
+    SECTIONS --> DASH
+    PRE --> DASH
+    SECTIONS --> FILE
+    INPUT --> DASH
+    DASH --> LOGS
+```
 
 ## Date logic
 
@@ -61,6 +120,14 @@ dotnet run -- clear-cache
 ```
 
 `generate` is the default command, so `dotnet run -- ...options...` works without explicitly typing `generate`.
+
+### Tests
+
+The repo includes an xUnit test project for feed parsing, cache behavior, prerelease consolidation, and VS Code release note parsing.
+
+```bash
+dotnet test
+```
 
 ### Generate options
 
@@ -137,7 +204,7 @@ dotnet run -- --non-interactive --newsletter copilot --model gpt-5.3-codex --for
 
 Generated newsletters are saved to:
 
-```
+```text
 output/newsletter-copilot-cli-sdk-YYYY-MM-DD.md
 output/newsletter-vscode-insiders-YYYY-MM-DD.md
 ```
@@ -153,7 +220,7 @@ The tool caches:
 - Feed data (atom/RSS feeds)
 - Generated summaries for each section
 
-Cache files are stored in a `.cache/` directory under the process working directory and use SHA256 hashing to detect changes in source data. When you follow the run instructions (`cd src/NewsletterGenerator && dotnet run`), this resolves to `src/NewsletterGenerator/.cache/`. If you run the app from another directory (for example from the repo root), the cache will be created in that directory instead (for example `./.cache/`). When source data changes, that section is regenerated. Use `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
+Cache files are stored in `src/NewsletterGenerator/.cache/` and use SHA256 hashing to detect changes in source data. The app resolves this location relative to the repository root, so it uses the same cache directory whether you run it from `src/NewsletterGenerator` or from the repo root. When source data changes, that section is regenerated. Use the `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
 
 ## Configuration
 
@@ -177,10 +244,12 @@ Filtering rules and summarization prompts can be modified in:
 This project uses the [GitHub.Copilot.SDK](https://www.nuget.org/packages/GitHub.Copilot.SDK) NuGet package and exercises these SDK features:
 
 | Feature | Where | Why |
-|-|-|-|
+| - | - | - |
 | **Streaming** | All AI sessions (`Streaming = true`) | Enables incremental response delivery; delta events are logged for diagnostics |
 | **ReasoningEffort** | All AI sessions (`ReasoningEffort = "low"`) | Summarization prompts don't need deep chain-of-thought; reduces latency |
 | **Session hooks** | `OnErrorOccurred`, `OnSessionStart`, `OnSessionEnd` | SDK-level error retry and session lifecycle logging without manual plumbing |
+| **ClientName** | All AI sessions (`ClientName = "newsletter-generator"`) | Tags requests with a stable application identity, which is useful for diagnostics and example code |
+| **Permission policy / tool restrictions** | All AI sessions (`AvailableTools = []`, `OnPermissionRequest = DenyUnexpectedPermissionRequest`) | Uses a least-privilege, fail-closed session policy because newsletter generation only needs text summarization, not tool access |
 | **PingAsync** | `doctor` command + startup status | Lightweight connectivity check without creating a full session |
 | **ListModelsAsync** | Model selection, `list-models` command | Enumerate available models for interactive selection |
 | **System messages** | `SystemMessageMode.Replace` on all sessions | Full control over system prompt for editorial tone and output formatting |
