@@ -30,8 +30,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
             request.Kind,
             request.ToolCallId);
 
-        throw new InvalidOperationException(
-            $"Unexpected permission request for newsletter generation session: {request.Kind}");
+        return Task.FromException<PermissionRequestResult>(
+            new InvalidOperationException(
+                $"Unexpected permission request for newsletter generation session: {request.Kind}"));
     }
 
     private SessionHooks CreateSessionHooks() => new()
