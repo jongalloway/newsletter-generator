@@ -285,6 +285,40 @@ public class ConsolidatePrereleasesTests
     }
 
     [Fact]
+    public void NumericSuffixPrereleases_AreMerged()
+    {
+        var releases = new List<ReleaseEntry>
+        {
+            Entry("0.0.421", "Stable release"),
+            Entry("0.0.421-0", "Preview build zero"),
+            Entry("0.0.421-1", "Preview build one"),
+        };
+
+        var result = AtomFeedService.ConsolidatePrereleases(releases);
+
+        Assert.Single(result);
+        Assert.Equal("0.0.421", result[0].Version);
+        Assert.Contains("Preview build zero", result[0].PlainText);
+        Assert.Contains("Preview build one", result[0].PlainText);
+    }
+
+    [Fact]
+    public void NumericSuffixOrphanPrerelease_IsDropped()
+    {
+        var releases = new List<ReleaseEntry>
+        {
+            Entry("0.0.420", "Stable release"),
+            Entry("0.0.421-0", "Orphan preview build"),
+        };
+
+        var result = AtomFeedService.ConsolidatePrereleases(releases);
+
+        Assert.Single(result);
+        Assert.Equal("0.0.420", result[0].Version);
+        Assert.DoesNotContain("Orphan preview build", result[0].PlainText);
+    }
+
+    [Fact]
     public void CaseInsensitiveVersionMatching()
     {
         var releases = new List<ReleaseEntry>

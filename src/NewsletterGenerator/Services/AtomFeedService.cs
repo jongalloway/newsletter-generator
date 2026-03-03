@@ -250,7 +250,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
 
     // ── Prerelease and language-prefix consolidation ───────────────────────────
 
-    [GeneratedRegex(@"^(?<base>.+?)-(?:preview|alpha|beta|rc)(?:\.\d+)?$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<base>.+?)-(?:(?:preview|alpha|beta|rc)(?:\.\d+)?|\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex RePrereleaseVersion();
 
     [GeneratedRegex(@"^(?<lang>[a-zA-Z][a-zA-Z0-9._]*)/(?<version>.+)$")]
@@ -270,14 +270,19 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
     /// Consolidates language-prefixed versions (e.g., go/v0.1.25) and prereleases
     /// (e.g., go/v0.1.25-preview.0) into their matching unprefixed full releases.
     /// Language-specific content is annotated with the language name (e.g., "(Go)").
-    /// Orphan prereleases with content are promoted to standalone entries.
+    /// Orphan or empty prereleases are skipped.
     /// </summary>
     public static List<ReleaseEntry> ConsolidatePrereleases(List<ReleaseEntry> releases)
+        => ConsolidatePrereleasesWithMetrics(releases).Releases;
+
+    internal static PrereleaseConsolidationResult ConsolidatePrereleasesWithMetrics(List<ReleaseEntry> releases)
     {
         // Categorize all entries
         var fullReleases = new List<ReleaseEntry>();               // e.g., v0.1.25
         var prefixedFullReleases = new List<(ReleaseEntry Entry, string Lang, string Version)>(); // e.g., go/v0.1.25
         var prereleases = new List<(ReleaseEntry Entry, string? Lang, string BaseVersion)>();      // e.g., go/v0.1.25-preview.0
+        var rolledUpPrereleases = new List<ConsolidatedPrerelease>();
+        var skippedPrereleases = new List<string>();
 
         foreach (var release in releases)
         {
@@ -336,7 +341,10 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         foreach (var (prerelease, lang, baseVersion) in prereleases)
         {
             if (string.IsNullOrWhiteSpace(prerelease.PlainText))
+            {
+                skippedPrereleases.Add(prerelease.Version);
                 continue;
+            }
 
             // Try matching against unprefixed full release first
             var fullIndex = fullReleases.FindIndex(r =>
@@ -348,11 +356,19 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
                 var langNote = lang != null ? $" ({FormatLangLabel(lang)})" : "";
                 var mergedText = $"{full.PlainText}\n\nAdditional features from prerelease{langNote} ({prerelease.Version}):\n{prerelease.PlainText}";
                 fullReleases[fullIndex] = full with { PlainText = mergedText };
+                rolledUpPrereleases.Add(new ConsolidatedPrerelease(full.Version, prerelease.Version));
             }
             // Orphan prerelease — no matching full release, drop it
+            else
+            {
+                skippedPrereleases.Add(prerelease.Version);
+            }
         }
 
-        return fullReleases;
+        return new PrereleaseConsolidationResult(
+            fullReleases,
+            rolledUpPrereleases,
+            skippedPrereleases);
     }
 
     internal static string FormatLangLabel(string lang) =>
@@ -367,6 +383,18 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             _ => lang
         };
 }
+
+internal sealed record PrereleaseConsolidationResult(
+    List<ReleaseEntry> Releases,
+    IReadOnlyList<ConsolidatedPrerelease> RolledUpPrereleases,
+    IReadOnlyList<string> SkippedPrereleases)
+{
+    public int DetectedPrereleases => RolledUpPrereleases.Count + SkippedPrereleases.Count;
+    public int RolledUpCount => RolledUpPrereleases.Count;
+    public int SkippedCount => SkippedPrereleases.Count;
+}
+
+internal sealed record ConsolidatedPrerelease(string ParentVersion, string PrereleaseVersion);
 
 public sealed record FeedFetchResult(
     List<ReleaseEntry> Entries,

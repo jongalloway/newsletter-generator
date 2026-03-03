@@ -447,6 +447,13 @@ internal static class NewsletterApp
         summaryTable.AddRow("Model", Markup.Escape(model));
         summaryTable.AddRow("SDK", $"Streaming: {(metrics.StreamingEnabled ? "On" : "Off")}, Reasoning: {Markup.Escape(metrics.ReasoningEffort)}");
         summaryTable.AddRow("Cache", $"{(useCache ? "Read/write" : "Force refresh")} [grey](hits {metrics.CacheHits}, misses {metrics.CacheMisses}, skips {metrics.CacheSkips})[/]");
+        if (metrics.PrereleaseCounts.Count > 0)
+        {
+            var totalDetected = metrics.PrereleaseCounts.Sum(p => p.DetectedCount);
+            var totalRolledUp = metrics.PrereleaseCounts.Sum(p => p.RolledUpCount);
+            var totalSkipped = metrics.PrereleaseCounts.Sum(p => p.SkippedCount);
+            summaryTable.AddRow("Prereleases", $"{totalDetected} detected [grey]({totalRolledUp} rolled up, {totalSkipped} skipped)[/]");
+        }
         summaryTable.AddRow("Timing", $"Wall [white]{metrics.TotalWallSeconds:F1}s[/], work [white]{totalWorkSeconds:F1}s[/], saved [green]{parallelSavedSeconds:F1}s[/]");
         summaryTable.AddRow("Output", string.IsNullOrWhiteSpace(metrics.OutputPath)
             ? "(none)"
@@ -489,6 +496,41 @@ internal static class NewsletterApp
 
         if (metrics.CacheSections.Count == 0)
             cacheTable.AddRow("(none)", "-", "-", "-");
+
+        Tree? releaseTree = null;
+        if (metrics.PrereleaseCounts.Count > 0)
+        {
+            releaseTree = new Tree("[bold]Release sources[/]")
+                .Guide(TreeGuide.Line)
+                .Style(Style.Parse("white"));
+
+            foreach (var prerelease in metrics.PrereleaseCounts)
+            {
+                var sourceNode = releaseTree.AddNode($"[cornflowerblue]{Markup.Escape(prerelease.Source)}[/]");
+
+                var rolledUpByParent = prerelease.RolledUpPrereleases
+                    .GroupBy(p => p.ParentVersion, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Select(p => p.PrereleaseVersion).ToList(), StringComparer.OrdinalIgnoreCase);
+
+                foreach (var finalRelease in prerelease.FinalReleaseVersions)
+                {
+                    var finalNode = sourceNode.AddNode($"[white]{Markup.Escape(finalRelease)}[/]");
+
+                    if (!rolledUpByParent.TryGetValue(finalRelease, out var childPrereleases))
+                        continue;
+
+                    foreach (var childPrerelease in childPrereleases)
+                        finalNode.AddNode($"[grey]{Markup.Escape(childPrerelease)}[/]");
+                }
+
+                if (prerelease.SkippedPrereleases.Count > 0)
+                {
+                    var skippedNode = sourceNode.AddNode($"[yellow]Skipped prereleases[/] ({prerelease.SkippedCount})");
+                    foreach (var skippedPrerelease in prerelease.SkippedPrereleases)
+                        skippedNode.AddNode($"[yellow]{Markup.Escape(skippedPrerelease)}[/]");
+                }
+            }
+        }
 
         var timingTable = new Table()
             .Border(TableBorder.Rounded)
@@ -548,6 +590,15 @@ internal static class NewsletterApp
             .BorderColor(Color.Grey)
             .Expand());
         AnsiConsole.WriteLine();
+        if (releaseTree is not null)
+        {
+            AnsiConsole.Write(new Panel(releaseTree)
+                .Header("[cornflowerblue]🌳 Release Summary[/]")
+                .Border(BoxBorder.Rounded)
+                .BorderColor(Color.Grey)
+                .Expand());
+            AnsiConsole.WriteLine();
+        }
         AnsiConsole.Write(new Panel(timingTable)
             .Header("[cornflowerblue]⏱ Stage Timing[/]")
             .Border(BoxBorder.Rounded)
@@ -1238,8 +1289,23 @@ internal static class NewsletterApp
 
         var cliPreCount = cliReleases.Count;
         var sdkPreCount = sdkReleases.Count;
-        cliReleases = AtomFeedService.ConsolidatePrereleases(cliReleases);
-        sdkReleases = AtomFeedService.ConsolidatePrereleases(sdkReleases);
+        var cliConsolidation = AtomFeedService.ConsolidatePrereleasesWithMetrics(cliReleases);
+        var sdkConsolidation = AtomFeedService.ConsolidatePrereleasesWithMetrics(sdkReleases);
+        cliReleases = cliConsolidation.Releases;
+        sdkReleases = sdkConsolidation.Releases;
+
+        metrics.PrereleaseCounts.Add(new PrereleaseCount(
+            "Copilot CLI releases",
+            cliFetchResult?.MatchedItems ?? 0,
+            cliReleases.Select(r => r.Version).ToList(),
+            cliConsolidation.RolledUpPrereleases,
+            cliConsolidation.SkippedPrereleases));
+        metrics.PrereleaseCounts.Add(new PrereleaseCount(
+            "Copilot SDK releases",
+            sdkFetchResult?.MatchedItems ?? 0,
+            sdkReleases.Select(r => r.Version).ToList(),
+            sdkConsolidation.RolledUpPrereleases,
+            sdkConsolidation.SkippedPrereleases));
 
         log.LogInformation("ConsolidatePrereleases: CLI {Before}->{After}, SDK {SdkBefore}->{SdkAfter}",
             cliPreCount, cliReleases.Count, sdkPreCount, sdkReleases.Count);
@@ -1249,13 +1315,13 @@ internal static class NewsletterApp
             (cliFetchResult?.TotalItems ?? 0).ToString(),
             (cliFetchResult?.InRangeItems ?? 0).ToString(),
             cliReleases.Count.ToString(),
-            $"{cliFetchResult?.MatchedItems ?? 0} matched before prerelease consolidation"));
+            $"{cliFetchResult?.MatchedItems ?? 0} matched; prereleases {cliConsolidation.DetectedPrereleases} ({cliConsolidation.RolledUpCount} rolled up, {cliConsolidation.SkippedCount} skipped)"));
         metrics.SourceCounts.Add(new SourceCount(
             "Copilot SDK releases",
             (sdkFetchResult?.TotalItems ?? 0).ToString(),
             (sdkFetchResult?.InRangeItems ?? 0).ToString(),
             sdkReleases.Count.ToString(),
-            $"{sdkFetchResult?.MatchedItems ?? 0} matched before prerelease consolidation"));
+            $"{sdkFetchResult?.MatchedItems ?? 0} matched; prereleases {sdkConsolidation.DetectedPrereleases} ({sdkConsolidation.RolledUpCount} rolled up, {sdkConsolidation.SkippedCount} skipped)"));
         metrics.SourceCounts.Add(new SourceCount(
             "Changelog (Copilot)",
             (changelogFetchResult?.TotalItems ?? 0).ToString(),
@@ -1504,6 +1570,7 @@ internal static class NewsletterApp
 internal sealed class RunMetrics
 {
     public List<SourceCount> SourceCounts { get; } = [];
+    public List<PrereleaseCount> PrereleaseCounts { get; } = [];
     public Dictionary<string, double> StageSeconds { get; } = [];
     public List<string> Warnings { get; } = [];
     public int CacheHits { get; set; }
@@ -1521,3 +1588,15 @@ internal sealed class RunMetrics
 }
 
 internal sealed record SourceCount(string Source, string RawCount, string FilteredCount, string FinalCount, string Notes);
+internal sealed record PrereleaseCount(
+    string Source,
+    int MatchedCount,
+    IReadOnlyList<string> FinalReleaseVersions,
+    IReadOnlyList<ConsolidatedPrerelease> RolledUpPrereleases,
+    IReadOnlyList<string> SkippedPrereleases)
+{
+    public int FinalCount => FinalReleaseVersions.Count;
+    public int DetectedCount => RolledUpPrereleases.Count + SkippedPrereleases.Count;
+    public int RolledUpCount => RolledUpPrereleases.Count;
+    public int SkippedCount => SkippedPrereleases.Count;
+}
