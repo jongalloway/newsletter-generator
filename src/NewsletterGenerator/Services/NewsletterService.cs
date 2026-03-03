@@ -7,6 +7,33 @@ namespace NewsletterGenerator.Services;
 
 public class NewsletterService(ILogger<NewsletterService> logger)
 {
+    private const string CopilotClientName = "newsletter-generator";
+
+    private sealed class StartedSession(CopilotClient client, CopilotSession session) : IAsyncDisposable
+    {
+        public CopilotSession Session { get; } = session;
+
+        public async ValueTask DisposeAsync()
+        {
+            await Session.DisposeAsync();
+            await client.DisposeAsync();
+        }
+    }
+
+    private Task<PermissionRequestResult> DenyUnexpectedPermissionRequest(
+        PermissionRequest request,
+        PermissionInvocation invocation)
+    {
+        logger.LogError(
+            "Unexpected permission request in newsletter generation session {SessionId}: kind={Kind}, toolCallId={ToolCallId}",
+            invocation.SessionId,
+            request.Kind,
+            request.ToolCallId);
+
+        throw new InvalidOperationException(
+            $"Unexpected permission request for newsletter generation session: {request.Kind}");
+    }
+
     private SessionHooks CreateSessionHooks() => new()
     {
         OnErrorOccurred = (input, invocation) =>
@@ -28,6 +55,39 @@ public class NewsletterService(ILogger<NewsletterService> logger)
             return Task.FromResult<SessionEndHookOutput?>(null);
         }
     };
+
+    private SessionConfig CreateSessionConfig(string? model, string systemMessageContent) => new()
+    {
+        AvailableTools = [],
+        ClientName = CopilotClientName,
+        OnPermissionRequest = DenyUnexpectedPermissionRequest,
+        Model = model,
+        Streaming = true,
+        ReasoningEffort = "low",
+        Hooks = CreateSessionHooks(),
+        SystemMessage = new SystemMessageConfig
+        {
+            Mode = SystemMessageMode.Replace,
+            Content = systemMessageContent
+        }
+    };
+
+    private async Task<StartedSession> CreateStartedSessionAsync(string? model, string systemMessageContent)
+    {
+        var client = new CopilotClient();
+        await client.StartAsync();
+
+        try
+        {
+            var session = await client.CreateSessionAsync(CreateSessionConfig(model, systemMessageContent));
+            return new StartedSession(client, session);
+        }
+        catch
+        {
+            await client.DisposeAsync();
+            throw;
+        }
+    }
 
     public async Task<string> GenerateWelcomeSummaryAsync(
         string newsSection,
@@ -56,19 +116,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
 
         logger.LogInformation("Generating Welcome summary (model={Model})", model);
         AnsiConsole.MarkupLine("[grey]Generating Welcome summary...[/]");
-        await using var client = new CopilotClient();
-        await client.StartAsync();
-
-        await using var session = await client.CreateSessionAsync(new SessionConfig
-        {
-            Model = model,
-            Streaming = true,
-            ReasoningEffort = "low",
-            Hooks = CreateSessionHooks(),
-            SystemMessage = new SystemMessageConfig
-            {
-                Mode = SystemMessageMode.Replace,
-                Content = """
+        await using var copilot = await CreateStartedSessionAsync(
+            model,
+            """
                     You are a technical newsletter editor writing for an internal developer audience at Microsoft.
                     Your job is to create a concise, factual summary of the week's updates.
 
@@ -86,9 +136,7 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                     - Output ONLY the paragraph text — no greeting, no markdown, no preamble
                     - Do NOT include meta-commentary like "Here's a summary" or "Based on the material"
                     - Start directly with the content
-                    """
-            }
-        });
+                    """);
 
         var prompt = $"""
             Write an opening paragraph for the GitHub Copilot CLI & SDK weekly newsletter
@@ -111,7 +159,7 @@ public class NewsletterService(ILogger<NewsletterService> logger)
             Generate ONLY the paragraph text (no markdown, no greeting).
             """;
 
-        var result = await SendPromptAsync(session, prompt);
+        var result = await SendPromptAsync(copilot.Session, prompt);
         logger.LogInformation("Welcome summary generated ({Length} chars)", result.Length);
         logger.LogDebug("Welcome summary content:\n{Content}", result);
 
@@ -142,25 +190,13 @@ public class NewsletterService(ILogger<NewsletterService> logger)
 
         logger.LogInformation("Generating newsletter title (model={Model})", model);
         AnsiConsole.MarkupLine("[grey]Generating newsletter title...[/]");
-        await using var client = new CopilotClient();
-        await client.StartAsync();
-
-        await using var session = await client.CreateSessionAsync(new SessionConfig
-        {
-            Model = model,
-            Streaming = true,
-            ReasoningEffort = "low",
-            Hooks = CreateSessionHooks(),
-            SystemMessage = new SystemMessageConfig
-            {
-                Mode = SystemMessageMode.Replace,
-                Content = """
+        await using var copilot = await CreateStartedSessionAsync(
+            model,
+            """
                     You generate a short, descriptive title for a weekly developer newsletter.
                     The title should highlight 2-3 of the most important items from the week.
                     Keep it factual and specific - use actual feature/product names.
-                    """
-            }
-        });
+                    """);
 
         var prompt = $"""
             Generate a title for this week's {newsletterLabel} newsletter.
@@ -181,7 +217,7 @@ public class NewsletterService(ILogger<NewsletterService> logger)
             - {newsletterLabel} - Claude Sonnet 4.6 GA, Cross-Session Memory, Infinite Sessions, and more!
             """;
 
-        var result = await SendPromptAsync(session, prompt);
+        var result = await SendPromptAsync(copilot.Session, prompt);
         result = result.Trim().Trim('"').Trim();
         logger.LogInformation("Newsletter title generated: {Title}", result);
 
@@ -215,19 +251,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
 
         logger.LogInformation("Generating News and Announcements (model={Model})", model);
         AnsiConsole.MarkupLine("[grey]Generating News and Announcements...[/]");
-        await using var client = new CopilotClient();
-        await client.StartAsync();
-
-        await using var session = await client.CreateSessionAsync(new SessionConfig
-        {
-            Model = model,
-            Streaming = true,
-            ReasoningEffort = "low",
-            Hooks = CreateSessionHooks(),
-            SystemMessage = new SystemMessageConfig
-            {
-                Mode = SystemMessageMode.Replace,
-                Content = """
+        await using var copilot = await CreateStartedSessionAsync(
+            model,
+            """
                     You are a technical newsletter editor for an internal Microsoft developer community.
                     Your job is to curate and write the "News and Announcements" section from changelog
                     and blog entries.
@@ -264,12 +290,10 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                     - Do NOT include phrases like "Based on my review", "Here's the content", etc.
                     - Start directly with the section header or content
                     - NO code fences, NO explanations
-                    """
-            }
-        });
+                    """);
 
         var prompt = BuildNewsPrompt(changelogEntries, blogEntries, weekStart, weekEnd);
-        var result = await SendPromptAsync(session, prompt);
+        var result = await SendPromptAsync(copilot.Session, prompt);
         logger.LogInformation("News section generated ({Length} chars)", result.Length);
         logger.LogDebug("News section content:\n{Content}", result);
 
@@ -326,19 +350,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                 await Task.Delay(delay);
             }
 
-            await using var client = new CopilotClient();
-            await client.StartAsync();
-
-            await using var session = await client.CreateSessionAsync(new SessionConfig
-            {
-                Model = model,
-                Streaming = true,
-                ReasoningEffort = "low",
-                Hooks = CreateSessionHooks(),
-                SystemMessage = new SystemMessageConfig
-                {
-                    Mode = SystemMessageMode.Replace,
-                    Content = """
+            await using var copilot = await CreateStartedSessionAsync(
+                model,
+                """
                         You are a technical newsletter editor for a GitHub Copilot developer community.
                         Your job is to aggressively curate and summarize release notes into polished newsletter content.
 
@@ -360,11 +374,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                         - Output ONLY the requested Markdown — no preamble, no commentary, no code fences
                         - Do NOT include meta-statements like "Here are the highlights" or "Based on my analysis"
                         - Start directly with the section header (### GitHub Copilot CLI or ### GitHub Copilot SDK)
-                        """
-                }
-            });
+                        """);
 
-            result = await SendPromptAsync(session, prompt);
+            result = await SendPromptAsync(copilot.Session, prompt);
             logger.LogInformation("{Product} attempt {Attempt}: {Length} chars", productName, attempt, result.Length);
 
             if (!string.IsNullOrWhiteSpace(result))
@@ -448,19 +460,9 @@ public class NewsletterService(ILogger<NewsletterService> logger)
         }
 
         AnsiConsole.MarkupLine("[grey]Generating VS Code newsletter...[/]");
-        await using var client = new CopilotClient();
-        await client.StartAsync();
-
-        await using var session = await client.CreateSessionAsync(new SessionConfig
-        {
-            Model = model,
-            Streaming = true,
-            ReasoningEffort = "low",
-            Hooks = CreateSessionHooks(),
-            SystemMessage = new SystemMessageConfig
-            {
-                Mode = SystemMessageMode.Replace,
-                Content = """
+        await using var copilot = await CreateStartedSessionAsync(
+            model,
+            """
                     You are a technical newsletter editor writing for an internal Microsoft developer audience.
                     Your job is to summarize weekly VS Code Insiders updates in a concise, factual tone.
 
@@ -493,9 +495,7 @@ public class NewsletterService(ILogger<NewsletterService> logger)
                     - Pick emojis that match the topic (e.g., 🤖 for AI, 🔧 for tools, 🖥️ for terminal, 🔒 for security)
 
                     Release notes: [VS Code Insiders](URL)
-                    """
-            }
-        });
+                    """);
 
         var featureLines = string.Join('\n', releaseNotes.Features.Select(f =>
             $"- [{f.Category}] {f.Description}{(string.IsNullOrWhiteSpace(f.Link) ? string.Empty : $" ({f.Link})")}"));
@@ -517,7 +517,7 @@ public class NewsletterService(ILogger<NewsletterService> logger)
             Generate ONLY the final Markdown newsletter content.
             """;
 
-        var result = await SendPromptAsync(session, prompt);
+        var result = await SendPromptAsync(copilot.Session, prompt);
         await cache.SaveCacheAsync("vscode-newsletter", result, sourceHash);
         return result;
     }
