@@ -342,7 +342,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         {
             if (string.IsNullOrWhiteSpace(prerelease.PlainText))
             {
-                skippedPrereleases.Add(prerelease.Version);
+                skippedPrereleases.Add(ExtractVersionTag(prerelease.Version));
                 continue;
             }
 
@@ -354,14 +354,15 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             {
                 var full = fullReleases[fullIndex];
                 var langNote = lang != null ? $" ({FormatLangLabel(lang)})" : "";
-                var mergedText = $"{full.PlainText}\n\nAdditional features from prerelease{langNote} ({prerelease.Version}):\n{prerelease.PlainText}";
+                var normalizedPreVersion = ExtractVersionTag(prerelease.Version);
+                var mergedText = $"{full.PlainText}\n\nAdditional features from prerelease{langNote} ({normalizedPreVersion}):\n{prerelease.PlainText}";
                 fullReleases[fullIndex] = full with { PlainText = mergedText };
-                rolledUpPrereleases.Add(new ConsolidatedPrerelease(full.Version, prerelease.Version));
+                rolledUpPrereleases.Add(new ConsolidatedPrerelease(full.Version, normalizedPreVersion));
             }
             // Orphan prerelease — no matching full release, drop it
             else
             {
-                skippedPrereleases.Add(prerelease.Version);
+                skippedPrereleases.Add(ExtractVersionTag(prerelease.Version));
             }
         }
 
