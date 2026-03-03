@@ -62,7 +62,7 @@ flowchart LR
     subgraph Output[Run results]
         DASH[Console progress + run dashboard]
         FILE[output/newsletter-...md]
-        LOGS[log/newsletter-{Date}.log]
+        LOGS["log/newsletter-{Date}.log"]
     end
 
     CLI --> ATOM
