@@ -447,7 +447,7 @@ internal static class NewsletterApp
         summaryTable.AddRow("Model", Markup.Escape(model));
         summaryTable.AddRow("SDK", $"Streaming: {(metrics.StreamingEnabled ? "On" : "Off")}, Reasoning: {Markup.Escape(metrics.ReasoningEffort)}");
         summaryTable.AddRow("Cache", $"{(useCache ? "Read/write" : "Force refresh")} [grey](hits {metrics.CacheHits}, misses {metrics.CacheMisses}, skips {metrics.CacheSkips})[/]");
-        if (metrics.PrereleaseCounts.Count > 0)
+        if (metrics.PrereleaseCounts.Any(p => p.DetectedCount > 0))
         {
             var totalDetected = metrics.PrereleaseCounts.Sum(p => p.DetectedCount);
             var totalRolledUp = metrics.PrereleaseCounts.Sum(p => p.RolledUpCount);
@@ -498,7 +498,7 @@ internal static class NewsletterApp
             cacheTable.AddRow("(none)", "-", "-", "-");
 
         Tree? releaseTree = null;
-        if (metrics.PrereleaseCounts.Count > 0)
+        if (metrics.PrereleaseCounts.Any(p => p.DetectedCount > 0))
         {
             releaseTree = new Tree("[bold]Release sources[/]")
                 .Guide(TreeGuide.Line)
