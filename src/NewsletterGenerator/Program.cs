@@ -1148,7 +1148,9 @@ internal static class NewsletterApp
 
         var topCategories = string.Join(", ", categorySummary);
         if (string.IsNullOrWhiteSpace(topCategories))
-            topCategories = "Release page from VS Code feed";
+            topCategories = releaseNotes != null
+                ? "Release page from VS Code feed"
+                : "No release notes";
 
         vscodeTable.AddRow("[cornflowerblue]VS Code Insiders[/]", $"[green]{releaseFeatures.Count}[/]", topCategories);
         vscodeTable.AddRow("[cornflowerblue]VS Code Blog[/]", $"[green]{vscodeMentionEntries.Count}[/]", "Posts mentioning VS Code");
