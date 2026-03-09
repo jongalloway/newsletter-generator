@@ -137,8 +137,8 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
 
     private static string GetContent(SyndicationItem item, bool preferShortSummary)
     {
-        if (preferShortSummary)
-            return item.Summary?.Text ?? "";
+        if (preferShortSummary && !string.IsNullOrWhiteSpace(item.Summary?.Text))
+            return item.Summary.Text;
 
         // Atom: <content> element
         if (item.Content is TextSyndicationContent textContent)
