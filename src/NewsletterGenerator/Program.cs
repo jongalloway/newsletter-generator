@@ -1077,6 +1077,26 @@ internal static class NewsletterApp
         var changelogVsCodeEntries = changelogEntries.Where(MentionsVsCode).ToList();
         var githubBlogVsCodeEntries = githubBlogEntries.Where(MentionsVsCode).ToList();
 
+        // Fall back to the feed-provided release page when the markdown parser
+        // cannot extract feature bullets from the current release notes file.
+        if (releaseNotes == null)
+        {
+            var fallbackReleaseUrl = vscodeMentionEntries
+                .Select(entry => entry.Url)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url)
+                    && url.Contains("/updates/v1_", StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(fallbackReleaseUrl))
+            {
+                releaseNotes = new VSCodeReleaseNotes(
+                    Date: weekEnd,
+                    Features: [],
+                    VersionUrl: fallbackReleaseUrl);
+
+                metrics.Warnings.Add("VS Code release-note bullets could not be parsed; using the feed release page as a fallback source.");
+            }
+        }
+
         metrics.SourceCounts.Add(new SourceCount(
             "VS Code Insiders",
             $"{releaseNotesResult?.CandidateUrlCount ?? 0} files",
@@ -1102,17 +1122,18 @@ internal static class NewsletterApp
             githubBlogVsCodeEntries.Count.ToString(),
             "Posts mentioning VS Code"));
 
-        if (releaseNotes == null ||
-            (releaseNotes.Features.Count == 0 &&
-             vscodeMentionEntries.Count == 0 &&
-             changelogVsCodeEntries.Count == 0 &&
-             githubBlogVsCodeEntries.Count == 0))
+        if (releaseNotes == null &&
+            vscodeMentionEntries.Count == 0 &&
+            changelogVsCodeEntries.Count == 0 &&
+            githubBlogVsCodeEntries.Count == 0)
         {
             AnsiConsole.MarkupLine($"[yellow]⚠[/] No VS Code-related items found in [bold]{weekStart:yyyy-MM-dd}[/] to [bold]{weekEnd:yyyy-MM-dd}[/].");
             return (null, defaultTitle);
         }
 
-        var categorySummary = releaseNotes.Features
+        var releaseFeatures = releaseNotes?.Features ?? [];
+
+        var categorySummary = releaseFeatures
             .GroupBy(f => f.Category)
             .OrderByDescending(g => g.Count())
             .Take(4)
@@ -1125,7 +1146,13 @@ internal static class NewsletterApp
             .AddColumn(new TableColumn("[bold]Items[/]").Centered())
             .AddColumn(new TableColumn("[bold]Top categories[/]").LeftAligned());
 
-        vscodeTable.AddRow("[cornflowerblue]VS Code Insiders[/]", $"[green]{releaseNotes.Features.Count}[/]", string.Join(", ", categorySummary));
+        var topCategories = string.Join(", ", categorySummary);
+        if (string.IsNullOrWhiteSpace(topCategories))
+            topCategories = releaseNotes != null
+                ? "Release page from VS Code feed"
+                : "No release notes";
+
+        vscodeTable.AddRow("[cornflowerblue]VS Code Insiders[/]", $"[green]{releaseFeatures.Count}[/]", topCategories);
         vscodeTable.AddRow("[cornflowerblue]VS Code Blog[/]", $"[green]{vscodeMentionEntries.Count}[/]", "Posts mentioning VS Code");
         vscodeTable.AddRow("[cornflowerblue]GitHub Changelog[/]", $"[green]{changelogVsCodeEntries.Count}[/]", "Copilot changelog items mentioning VS Code");
         vscodeTable.AddRow("[cornflowerblue]GitHub Blog[/]", $"[green]{githubBlogVsCodeEntries.Count}[/]", "Posts mentioning VS Code");
@@ -1149,7 +1176,7 @@ internal static class NewsletterApp
                 sectionTask,
                 sectionLabel,
                 () => newsletterService.GenerateVsCodeNewsletterAsync(
-                    releaseNotes,
+                    releaseNotes!,
                     vscodeMentionEntries,
                     changelogVsCodeEntries,
                     githubBlogVsCodeEntries,

@@ -1,4 +1,8 @@
 using NewsletterGenerator.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 
 namespace NewsletterGenerator.Tests;
 
@@ -147,5 +151,52 @@ public class AtomFeedServiceTests
     public void FormatLangLabel_MapsCorrectly(string input, string expected)
     {
         Assert.Equal(expected, AtomFeedService.FormatLangLabel(input));
+    }
+
+    [Fact]
+    public async Task FetchFeedWithMetricsAsync_UsesAtomContentWhenSummaryMissing()
+    {
+        const string atomFeed = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Visual Studio Code</title>
+              <updated>2026-03-04T17:00:00.000Z</updated>
+              <entry>
+                <title>February 2026 (version 1.110)</title>
+                <link href="https://code.visualstudio.com/updates/v1_110" />
+                <updated>2026-03-04T17:00:00.000Z</updated>
+                <id>https://code.visualstudio.com/updates/v1_110</id>
+                <content type="html">&lt;p&gt;What's new in the Visual Studio Code February 2026 Release (1.110).&lt;/p&gt;</content>
+              </entry>
+            </feed>
+            """;
+
+        using var httpClient = new HttpClient(new StubHttpMessageHandler(atomFeed));
+        var service = new AtomFeedService(NullLogger<AtomFeedService>.Instance, httpClient);
+
+        var result = await service.FetchFeedWithMetricsAsync(
+            "https://code.visualstudio.com/feed.xml",
+            new DateOnly(2026, 2, 26),
+            new DateOnly(2026, 3, 4),
+            preferShortSummary: true,
+            maxContentChars: 1000);
+
+        var entry = Assert.Single(result.Entries);
+        Assert.Equal(new DateOnly(2026, 3, 4), entry.PublishedAt);
+        Assert.Contains("Visual Studio Code", entry.PlainText);
+        Assert.Equal("https://code.visualstudio.com/updates/v1_110", entry.Url);
+    }
+
+    private sealed class StubHttpMessageHandler(string content) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(content, Encoding.UTF8, "application/atom+xml")
+            };
+
+            return Task.FromResult(response);
+        }
     }
 }
