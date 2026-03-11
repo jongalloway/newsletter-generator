@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using GitHub.Copilot.SDK;
+using Lolcat;
 using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;
@@ -167,6 +168,13 @@ internal static class NewsletterApp
     private const string ChangelogCopilotUrl = "https://github.blog/changelog/label/copilot/feed/";
     private const string BlogUrl = "https://github.blog/feed/";
     private const string VSCodeBlogUrl = "https://code.visualstudio.com/feed.xml";
+    private static readonly FigletFont HeaderFont = FigletFont.Load(
+        Path.Combine(AppContext.BaseDirectory, "Assets", "ansi-shadow.flf"));
+    private static readonly Rainbow HeaderRainbow = Rainbow.WithStyle(new RainbowStyle(
+        EscapeSequence: EscapeSequence.Spectre,
+        Spread: 7,
+        Frequency: 0.35,
+        Seed: 42));
 
     public static async Task<int> RunGenerateAsync(GenerateSettings settings)
     {
@@ -369,12 +377,26 @@ internal static class NewsletterApp
 
     private static void RenderHeader()
     {
-        AnsiConsole.Write(
-            new FigletText("Newsletter")
-                .LeftJustified()
-                .Color(Color.CornflowerBlue));
+        var banner = new FigletText(HeaderFont, "Newsletter Generator")
+        {
+            Justification = Justify.Left,
+            Pad = false
+        };
 
-        AnsiConsole.Write(new Rule("[cornflowerblue]GitHub Copilot CLI & SDK Weekly Generator[/]")
+        using var bannerWriter = new StringWriter();
+        var bannerConsole = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(bannerWriter),
+            Interactive = InteractionSupport.No
+        });
+
+        bannerConsole.Write(banner);
+
+        HeaderRainbow.WriteLineWithMarkup(bannerWriter.ToString().TrimEnd());
+
+        AnsiConsole.Write(new Rule("[yellow]🤖[/] [cornflowerblue]GitHub Copilot CLI & SDK Weekly Generator[/] [yellow]📰[/]")
             .LeftJustified());
         AnsiConsole.WriteLine();
     }

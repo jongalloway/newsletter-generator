@@ -12,7 +12,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Assets\ansi-shadow.flf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="GitHub.Copilot.SDK" Version="0.1.32" />
+    <PackageReference Include="lolcat" Version="1.1.131" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
