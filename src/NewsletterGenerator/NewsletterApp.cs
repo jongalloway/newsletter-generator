@@ -518,10 +518,11 @@ internal static partial class NewsletterApp
 
                 var m = await modelsTask;
                 var ping = await pingTask;
-                var status = m == null ? "Connected" : $"Connected ({m.Count} models available, ping: {ping})";
+                var modelList = m == null ? null : new List<ModelInfo>(m);
+                var status = modelList == null ? "Connected" : $"Connected ({modelList.Count} models available, ping: {ping})";
                 sdkStopwatch.Stop();
 
-                return (authed, auth, m, status, ping, sdkStopwatch.Elapsed.TotalSeconds);
+                return (authed, auth, modelList, status, ping, sdkStopwatch.Elapsed.TotalSeconds);
             });
 
             try
@@ -668,7 +669,8 @@ internal static partial class NewsletterApp
                         task.Increment(40);
                         await client.StartAsync();
                         task.Increment(30);
-                        models = await client.ListModelsAsync();
+                        var modelList = await client.ListModelsAsync();
+                        models = modelList == null ? null : new List<ModelInfo>(modelList);
                         task.Increment(30);
                         SetTaskInactive(task, taskLabel);
                     });

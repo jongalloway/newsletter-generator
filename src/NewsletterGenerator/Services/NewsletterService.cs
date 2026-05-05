@@ -26,10 +26,9 @@ public partial class NewsletterService(ILogger<NewsletterService> logger)
         PermissionInvocation invocation)
     {
         logger.LogError(
-            "Unexpected permission request in newsletter generation session {SessionId}: kind={Kind}, toolCallId={ToolCallId}",
+            "Unexpected permission request in newsletter generation session {SessionId}: kind={Kind}",
             invocation.SessionId,
-            request.Kind,
-            request.ToolCallId);
+            request.Kind);
 
         return Task.FromException<PermissionRequestResult>(
             new InvalidOperationException(
