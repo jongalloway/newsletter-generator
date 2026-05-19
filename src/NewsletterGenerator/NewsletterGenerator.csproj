@@ -18,7 +18,7 @@
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.55.2" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
-    <PackageReference Include="System.ServiceModel.Syndication" Version="10.0.5" />
+    <PackageReference Include="System.ServiceModel.Syndication" Version="10.0.8" />
   </ItemGroup>
 
 </Project>
