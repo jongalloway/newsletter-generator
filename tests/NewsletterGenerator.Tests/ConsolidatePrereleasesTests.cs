@@ -10,6 +10,9 @@ public class ConsolidatePrereleasesTests
     private static ReleaseEntry Entry(string version, string text = "content") =>
         new(version, Date, text, $"https://github.com/releases/{version}");
 
+    private static ReleaseEntry Entry(string version, DateOnly date, string text = "content") =>
+        new(version, date, text, $"https://github.com/releases/{version}");
+
     [Fact]
     public void SimplePrerelease_MergesIntoFullRelease()
     {
@@ -42,6 +45,30 @@ public class ConsolidatePrereleasesTests
         Assert.Equal("v0.1.25", result[0].Version);
         Assert.Equal("v0.1.26-preview.0", result[1].Version);
         Assert.Contains("Orphan preview", result[1].PlainText);
+    }
+
+    [Fact]
+    public void OrphanPrereleases_AreOrderedNewestFirst_NotAppendedLast()
+    {
+        // Reproduces the CLI ordering bug: 1.0.69-0/-1/-2 have no full 1.0.69 release,
+        // so they are promoted as standalone entries. Previously all promoted orphans were
+        // appended to the end of the list, dropping 1.0.69-0 below older full releases.
+        // Input is in feed order (newest-first); consolidation must preserve it.
+        var releases = new List<ReleaseEntry>
+        {
+            Entry("1.0.69-2", new DateOnly(2026, 7, 6), "Newest prerelease"),
+            Entry("1.0.69-1", new DateOnly(2026, 7, 4), "Middle prerelease"),
+            Entry("1.0.69-0", new DateOnly(2026, 7, 1), "Oldest prerelease"),
+            Entry("1.0.68", new DateOnly(2026, 7, 1), "Full release 68"),
+            Entry("1.0.67", new DateOnly(2026, 6, 30), "Full release 67"),
+            Entry("1.0.66", new DateOnly(2026, 6, 30), "Full release 66"),
+        };
+
+        var result = AtomFeedService.ConsolidatePrereleases(releases);
+
+        Assert.Equal(
+            ["1.0.69-2", "1.0.69-1", "1.0.69-0", "1.0.68", "1.0.67", "1.0.66"],
+            result.Select(r => r.Version));
     }
 
     [Fact]
@@ -155,16 +182,19 @@ public class ConsolidatePrereleasesTests
 
         var result = AtomFeedService.ConsolidatePrereleases(releases);
 
-        // Should have 3 releases: v0.1.25, v0.1.24, and the orphan go/v0.1.26-preview.0 (promoted)
+        // Should have 3 releases: the orphan go/v0.1.26-preview.0 (newest, promoted),
+        // then v0.1.25 and v0.1.24. Feed order (newest-first) is preserved, so the promoted
+        // orphan stays at the top rather than being appended after the older stable releases.
         Assert.Equal(3, result.Count);
-        Assert.Equal("v0.1.25", result[0].Version);
-        Assert.Equal("v0.1.24", result[1].Version);
-
-        // go/v0.1.25-preview.0 content should be merged into v0.1.25
-        Assert.Contains("MCP env fix", result[0].PlainText);
+        Assert.StartsWith("go/v0.1.26-preview.0", result[0].Version);
+        Assert.Equal("v0.1.25", result[1].Version);
+        Assert.Equal("v0.1.24", result[2].Version);
 
         // go/v0.1.26-preview.0 is promoted as standalone (orphan with content)
-        Assert.Contains("E2E content", result[2].PlainText);
+        Assert.Contains("E2E content", result[0].PlainText);
+
+        // go/v0.1.25-preview.0 content should be merged into v0.1.25
+        Assert.Contains("MCP env fix", result[1].PlainText);
     }
 
     [Fact]
@@ -399,9 +429,12 @@ public class ConsolidatePrereleasesTests
         var result = AtomFeedService.ConsolidatePrereleases(releases);
 
         // rust-v0.1.0 is a full release (no prerelease suffix, dash doesn't match lang prefix regex)
-        // All betas (including rust/v1.0.0-beta.4) are promoted as separate standalone entries
+        // All betas (including rust/v1.0.0-beta.4) are promoted as separate standalone entries.
+        // Feed order (newest-first) is preserved, so rust-v0.1.0 stays last (it is listed last).
         Assert.Equal(5, result.Count);
-        Assert.Equal("rust-v0.1.0", result[0].Version);
+        Assert.Equal(
+            ["v1.0.0-beta.4", "rust/v1.0.0-beta.4", "v1.0.0-beta.3", "v1.0.0-beta.2", "rust-v0.1.0"],
+            result.Select(r => r.Version));
 
         var beta4 = result.First(r => r.Version == "v1.0.0-beta.4");
         Assert.Contains("Typed Go union interfaces", beta4.PlainText);

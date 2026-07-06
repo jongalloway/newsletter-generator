@@ -403,8 +403,24 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             fullReleases.Add(entry);
         }
 
+        // Consolidation merges some entries and appends promoted orphan prereleases to the
+        // end, which loses the feed's original (date-descending) order — e.g. an orphan
+        // prerelease like 1.0.69-0 ends up below older full releases. Restore each surviving
+        // entry to its position in the original input so the ordering stays newest-first.
+        var inputOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < releases.Count; i++)
+        {
+            var key = ExtractVersionTag(releases[i].Version);
+            if (!inputOrder.ContainsKey(key))
+                inputOrder[key] = i;
+        }
+
+        var ordered = fullReleases
+            .OrderBy(r => inputOrder.TryGetValue(ExtractVersionTag(r.Version), out var idx) ? idx : int.MaxValue)
+            .ToList();
+
         return new PrereleaseConsolidationResult(
-            fullReleases,
+            ordered,
             rolledUpPrereleases,
             skippedPrereleases);
     }
