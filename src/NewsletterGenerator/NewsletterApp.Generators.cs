@@ -512,7 +512,7 @@ internal static partial class NewsletterApp
         contentBuilder.AppendLine("Welcome");
         contentBuilder.AppendLine("--------");
         contentBuilder.AppendLine();
-        contentBuilder.AppendLine("This is your weekly update for GitHub Copilot CLI, SDK, and app! Feel free to forward internally and encourage your co-workers to subscribe at [https://aka.ms/copilot-cli-insiders/join](https://aka.ms/copilot-cli-insiders/join) and forward this newsletter around!");
+        contentBuilder.AppendLine("This is your weekly update for GitHub Copilot CLI, SDK, and app! Feel free to forward internally and encourage your co-workers to subscribe at [https://aka.ms/github-copilot-insiders/join](https://aka.ms/github-copilot-insiders/join) and forward this newsletter around!");
         contentBuilder.AppendLine();
         contentBuilder.AppendLine(welcomeSummary);
         contentBuilder.AppendLine();
