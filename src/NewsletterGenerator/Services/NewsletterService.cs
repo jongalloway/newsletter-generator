@@ -645,14 +645,15 @@ public partial class NewsletterService(
         logger.LogInformation("App summary result: {Length} chars, empty={IsEmpty}", appSummary.Length, string.IsNullOrWhiteSpace(appSummary));
 
         // Combine into final sections (top-level H2 headings, no wrapper)
-        var sb = new StringBuilder();
-        sb.Append(cliSummary);
-        sb.AppendLine();
-        sb.Append(sdkSummary);
-        sb.AppendLine();
-        sb.Append(appSummary);
-
-        var combined = sb.ToString();
+        // Join with a blank line between sections. Trim trailing whitespace from each
+        // section first so the separator is exactly one blank line regardless of whether
+        // the model emitted a trailing newline (otherwise the next "## " heading can end
+        // up glued directly to the previous section's last bullet).
+        var combined = string.Join(
+            "\n\n",
+            new[] { cliSummary, sdkSummary, appSummary }
+                .Select(section => section.TrimEnd())
+                .Where(section => !string.IsNullOrWhiteSpace(section)));
         logger.LogInformation("Combined release section: {Length} chars", combined.Length);
         logger.LogDebug("Combined release section content:\n{Content}", combined);
         return combined;
@@ -1581,9 +1582,21 @@ public partial class NewsletterService(
 
             Pick the 4–6 most impactful developer-facing highlights for the week.
 
+            WEEKLY SUMMARY (required):
+            - Immediately after the "## {productName} Updates" header, write a short plain-text summary
+              of what changed for this product this week, BEFORE any per-version sub-sections.
+            - Readers rely on this summary, so always include it. Scale it to the amount of activity:
+              a single sentence is enough for one or two releases; use 2-3 sentences (or a few short
+              lead bullets) when there are several releases or a big theme.
+            - Frame the week at a high level (the main themes), do not restate every bullet below.
+            - Use literal wording like "adds", "changes", "supports", "requires", and "fixes".
+              Do NOT use marketing or hype language.
+
             Output ONLY the Markdown below (no extra text). Follow this exact structure:
 
             ## {productName} Updates
+
+            <one or two sentences summarizing this week's {productName} changes at a high level>
 
             <one sub-section per version with MAXIMUM 6 bullets (ideally 3-5), highly condensed thematic summaries.
              Use **bold labels** to categorize each bullet. Do NOT use emojis.>
