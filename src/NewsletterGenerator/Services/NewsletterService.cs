@@ -1207,8 +1207,12 @@ public partial class NewsletterService(
         sb.AppendLine($"""
             Generate the "Developer Blogs" section for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
 
-            Curate the most interesting 5-8 posts across .NET, Azure, Aspire, TypeScript, GitHub Blog, and developer.microsoft.com blogs.
-            Group by topic area. Be highly selective - only include posts that would interest an MVP audience.
+            Curate the most interesting 6-10 posts across .NET, Azure, Aspire, TypeScript, GitHub Blog, and developer.microsoft.com blogs.
+            Group by topic area. Be selective - only include posts that would interest an MVP audience, but lean toward
+            including a high-quality post rather than cutting it.
+            Give extra weight to posts with broad audience appeal - for example, a post that spans multiple topics or
+            products (such as .NET plus the GitHub Copilot app) is more valuable than a narrow single-topic post and
+            should be favored when deciding what makes the cut.
             Each bullet: - **[Title](url)** - one SHORT sentence summary (under 20 words).
             Brevity is critical. State what changed or shipped, not background context.
 
