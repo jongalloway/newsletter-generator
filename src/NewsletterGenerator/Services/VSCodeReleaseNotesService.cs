@@ -10,9 +10,9 @@ public partial class VSCodeReleaseNotesService
     private readonly HttpClient _http;
 
     private const string RawGitHubBaseUrl = "https://raw.githubusercontent.com/microsoft/vscode-docs/refs/heads/main/release-notes/";
-    private const string InsidersRedirectUrl = "https://aka.ms/vscode/updates/insiders";
+    private const string StableUpdatesUrl = "https://code.visualstudio.com/updates";
     private const string RequiredProductEdition = "Insiders";
-    private int? _resolvedVersionNumber;
+    private int? _resolvedStableVersionNumber;
 
     private const int MinBulletLength = 5;
     private const int MaxTitleLength = 80;
@@ -395,18 +395,17 @@ public partial class VSCodeReleaseNotesService
 
     private async Task<IReadOnlyList<string>> GetCandidateMarkdownUrlsAsync(DateOnly targetDate)
     {
-        var currentVersion = await ResolveCurrentVersionAsync();
+        var currentStableVersion = await ResolveCurrentStableVersionAsync();
 
-        if (currentVersion.HasValue)
+        if (currentStableVersion.HasValue)
         {
-            // Include currentVersion + 1 because the aka.ms redirect may still
-            // point to the previous version after it transitions from Insiders
-            // to Stable (e.g. v1_116 goes Stable but redirect hasn't moved to v1_117).
+            // Stable releases are authoritative on the updates page. The next
+            // release-note file is the current Insiders build.
             var urls = new List<string>
             {
-                $"{RawGitHubBaseUrl}v1_{currentVersion.Value + 1}.md",
-                $"{RawGitHubBaseUrl}v1_{currentVersion.Value}.md",
-                $"{RawGitHubBaseUrl}v1_{currentVersion.Value - 1}.md"
+                $"{RawGitHubBaseUrl}v1_{currentStableVersion.Value + 1}.md",
+                $"{RawGitHubBaseUrl}v1_{currentStableVersion.Value}.md",
+                $"{RawGitHubBaseUrl}v1_{currentStableVersion.Value - 1}.md"
             };
 
             return urls.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -415,14 +414,14 @@ public partial class VSCodeReleaseNotesService
         return GetCandidateMarkdownUrlsByDate(targetDate);
     }
 
-    private async Task<int?> ResolveCurrentVersionAsync()
+    private async Task<int?> ResolveCurrentStableVersionAsync()
     {
-        if (_resolvedVersionNumber.HasValue)
-            return _resolvedVersionNumber;
+        if (_resolvedStableVersionNumber.HasValue)
+            return _resolvedStableVersionNumber;
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Head, InsidersRedirectUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Head, StableUpdatesUrl);
             using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
             var finalUrl = response.RequestMessage?.RequestUri?.ToString();
@@ -433,12 +432,12 @@ public partial class VSCodeReleaseNotesService
             if (!match.Success)
                 return null;
 
-            _resolvedVersionNumber = int.Parse(match.Groups[1].Value);
-            return _resolvedVersionNumber;
+            _resolvedStableVersionNumber = int.Parse(match.Groups[1].Value);
+            return _resolvedStableVersionNumber;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[VSCodeReleaseNotesService] Failed to resolve current version: {ex.Message}");
+            Debug.WriteLine($"[VSCodeReleaseNotesService] Failed to resolve current stable version: {ex.Message}");
             return null;
         }
     }

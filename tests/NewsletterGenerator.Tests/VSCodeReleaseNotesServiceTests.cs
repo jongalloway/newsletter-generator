@@ -1,3 +1,4 @@
+using System.Net;
 using NewsletterGenerator.Services;
 
 namespace NewsletterGenerator.Tests;
@@ -146,5 +147,71 @@ public class VSCodeReleaseNotesServiceTests
         var highlights = VSCodeReleaseNotesService.ParseStableHighlights(markdown);
 
         Assert.Empty(highlights);
+    }
+
+    [Fact]
+    public async Task GetReleaseNotesFetchResultForDateRangeAsync_UsesStableVersionPlusOneForInsiders()
+    {
+        using var httpClient = new HttpClient(new ReleaseNotesHttpMessageHandler());
+        var service = new VSCodeReleaseNotesService(httpClient);
+
+        var result = await service.GetReleaseNotesFetchResultForDateRangeAsync(
+            new DateOnly(2026, 7, 21),
+            new DateOnly(2026, 7, 23));
+
+        Assert.NotNull(result.ReleaseNotes);
+        Assert.EndsWith("v1_131.md", result.ReleaseNotes.VersionUrl);
+        Assert.EndsWith("v1_130.md", result.StableVersionUrl);
+        Assert.Single(result.StableHighlights);
+        Assert.Single(result.ReleaseNotes.Features);
+    }
+
+    private sealed class ReleaseNotesHttpMessageHandler : HttpMessageHandler
+    {
+        private const string StableReleaseNotes = """
+            ---
+            ProductEdition: Stable
+            ---
+            Welcome to the 1.130 release of Visual Studio Code.
+
+            * [Agent host](#agent-host): Run sessions in a dedicated process.
+
+            Happy Coding!
+            """;
+
+        private const string InsidersReleaseNotes = """
+            ---
+            ProductEdition: Insiders
+            ---
+            ## July 22, 2026 - Agents
+            * Add support for selecting a folder from a quick pick in the new session view.
+            """;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var url = request.RequestUri!.ToString();
+
+            if (url == "https://code.visualstudio.com/updates")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = new HttpRequestMessage(HttpMethod.Head, "https://code.visualstudio.com/updates/v1_130")
+                });
+            }
+
+            var content = url.EndsWith("v1_130.md", StringComparison.Ordinal)
+                ? StableReleaseNotes
+                : url.EndsWith("v1_131.md", StringComparison.Ordinal)
+                    ? InsidersReleaseNotes
+                    : null;
+
+            if (content == null)
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(content)
+            });
+        }
     }
 }
