@@ -791,8 +791,9 @@ internal static partial class NewsletterApp
 
             var selectedLabel = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[yellow]Select a model[/]")
+                    .Title($"[yellow]Select a model[/] [dim]({models.Count} available)[/]")
                     .PageSize(12)
+                    .MoreChoicesText("[grey](Move up and down to see all models)[/]")
                     .AddChoices(labels));
 
             var selectedIndex = labels.FindIndex(label => label == selectedLabel);

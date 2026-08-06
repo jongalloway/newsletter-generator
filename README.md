@@ -101,6 +101,17 @@ dotnet run
 
 This generates a newsletter using the automatic date logic described above.
 
+### Custom npm registry
+
+The GitHub Copilot SDK downloads its platform CLI package during the build. It uses the public npm registry by default and does not read npm's `registry` setting. If your network requires an npm mirror or proxy, set the `CopilotNpmRegistryUrl` environment variable before building.
+
+```powershell
+$env:CopilotNpmRegistryUrl = npm config get registry
+dotnet build
+```
+
+This override applies only to the current shell. Set the environment variable in your user or CI configuration if it should persist.
+
 ### Commands
 
 ```bash
