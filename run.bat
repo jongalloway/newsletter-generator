@@ -1,5 +1,13 @@
 @echo off
 cd /d "%~dp0src\NewsletterGenerator"
+
+if not defined CopilotNpmRegistryUrl (
+    where npm >nul 2>&1
+    if not errorlevel 1 (
+        for /f "delims=" %%R in ('npm config get registry 2^>nul') do set "CopilotNpmRegistryUrl=%%R"
+    )
+)
+
 echo Building newsletter generator...
 dotnet build
 if %ERRORLEVEL% NEQ 0 (
@@ -10,5 +18,5 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo Running newsletter generator...
-dotnet run
+dotnet run --no-build
 pause
