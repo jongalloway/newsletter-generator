@@ -1168,7 +1168,8 @@ public partial class NewsletterService(
         IReadOnlyList<ContentItem> contentItems,
         int minimumItems,
         int maximumItems,
-        string itemPrefix)
+        string itemPrefix,
+        bool useHardLineBreaks)
     {
         var sourceHash = CacheService.GetContentHash(sourceDataJson);
         var cached = await cache.TryGetCachedAsync(cacheKey, sourceHash);
@@ -1195,7 +1196,8 @@ public partial class NewsletterService(
                         contentItems,
                         minimumItems,
                         maximumItems,
-                        itemPrefix);
+                        itemPrefix,
+                        useHardLineBreaks);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -1221,7 +1223,8 @@ public partial class NewsletterService(
                         contentItems,
                         minimumItems,
                         maximumItems,
-                        itemPrefix);
+                        itemPrefix,
+                        useHardLineBreaks);
                 }
             });
         await cache.SaveCacheAsync(cacheKey, rendered, sourceHash);
@@ -1373,7 +1376,8 @@ public partial class NewsletterService(
         IReadOnlyList<ContentItem> contentItems,
         int minimumItems,
         int maximumItems,
-        string itemPrefix)
+        string itemPrefix,
+        bool useHardLineBreaks = false)
     {
         if (string.IsNullOrWhiteSpace(section.Summary))
             throw new InvalidOperationException($"{heading} curation returned an empty summary.");
@@ -1430,7 +1434,8 @@ public partial class NewsletterService(
                     : curated.DisplayTitle;
                 var label = EscapeMarkdownLinkLabel(NormalizeDisplayTitle(displayTitle));
                 var description = EnsureTerminalPunctuation(curated.Summary.Trim());
-                output.AppendLine($"{itemPrefix} **[{label}]({content.Url})** - {description}");
+                var hardLineBreak = useHardLineBreaks ? "  " : string.Empty;
+                output.AppendLine($"{itemPrefix} **[{label}]({content.Url})** - {description}{hardLineBreak}");
             }
         }
 
@@ -1758,7 +1763,8 @@ public partial class NewsletterService(
             contentItems,
             minimumItems,
             maximumItems,
-            "-");
+            "-",
+            useHardLineBreaks: false);
     }
 
     public async Task<string> GenerateDevTechVideosSectionAsync(
@@ -1813,7 +1819,7 @@ public partial class NewsletterService(
             model
         });
         return await GenerateCachedCuratedSectionAsync(
-            "devtech-videos-v5",
+            "devtech-videos-v6",
             sourceData,
             prompt,
             cache,
@@ -1823,7 +1829,8 @@ public partial class NewsletterService(
             contentItems,
             minimumItems,
             maximumItems,
-            "📺");
+            "📺",
+            useHardLineBreaks: true);
     }
 
     public async Task<string> GenerateDevTechWelcomeAsync(

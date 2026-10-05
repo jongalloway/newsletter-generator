@@ -282,10 +282,14 @@ public class CuratedSectionTests
             items,
             minimumItems: 2,
             maximumItems: 2,
-            itemPrefix: "📺");
+            itemPrefix: "📺",
+            useHardLineBreaks: true);
 
         Assert.Contains(
-            $")** - First.{Environment.NewLine}📺 **[Copilot CLI update]",
+            $")** - First.  {Environment.NewLine}📺 **[Copilot CLI update]",
+            markdown);
+        Assert.DoesNotContain(
+            $")** - First.{Environment.NewLine}{Environment.NewLine}📺",
             markdown);
     }
 
