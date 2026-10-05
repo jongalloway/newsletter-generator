@@ -146,7 +146,38 @@ public class CuratedSectionTests
     }
 
     [Fact]
-    public void RenderCuratedSection_GroupsBlogPostsByFeedBackedCategory()
+    public void RenderCuratedSection_UsesCuratedDisplayTitleWithAuthoritativeUrl()
+    {
+        var sourceEntry = FirstEntry with
+        {
+            Version = "[Launched] Generally Available: Typed structured output"
+        };
+        var items = CreateUncategorizedContentItems(sourceEntry);
+        var section = new CuratedSection(
+            "The SDK shipped an update.",
+            [
+                new CuratedContentItem(
+                    "item-001",
+                    "Typed structured output is generally available",
+                    "Adds schema-backed responses for SDK sessions")
+            ]);
+
+        var markdown = NewsletterService.RenderCuratedSection(
+            "Developer Blogs",
+            section,
+            items,
+            minimumItems: 1,
+            maximumItems: 1,
+            itemPrefix: "-");
+
+        Assert.Contains(
+            "**[Typed structured output is generally available](https://github.blog/changelog/typed-output)**",
+            markdown);
+        Assert.DoesNotContain("[Launched]", markdown);
+    }
+
+    [Fact]
+    public void RenderCuratedSection_GroupsBlogPostsInDeterministicCategoryOrder()
     {
         List<ContentSourceGroup> sources =
         [
@@ -175,15 +206,33 @@ public class CuratedSectionTests
 
             Two areas shipped updates.
 
-            ### GitHub and DevTools
-
-            - **[Copilot CLI update](https://github.blog/copilot-cli-update)** - Adds a new workflow.
-
             ### .NET
 
             - **[Typed structured output](https://github.blog/changelog/typed-output)** - Adds schema-backed responses.
+
+            ### GitHub and DevTools
+
+            - **[Copilot CLI update](https://github.blog/copilot-cli-update)** - Adds a new workflow.
             """,
             markdown);
+    }
+
+    [Theory]
+    [InlineData(
+        "[Launched] Generally Available: Vector search and vector indexes in Azure SQL",
+        "Generally Available: Vector search and vector indexes in Azure SQL")]
+    [InlineData(
+        "Retirement: Support ends November 10, 2026-upgrade your apps",
+        "Retirement: Support ends November 10, 2026 - upgrade your apps")]
+    [InlineData(
+        "Your Database Belongs in Source Control Too #databases #visualstudio",
+        "Your Database Belongs in Source Control Too")]
+    [InlineData(
+        "🎖️ Captain's Training: Master Copilot Studio",
+        "Captain's Training: Master Copilot Studio")]
+    public void NormalizeDisplayTitle_RemovesFeedFormattingArtifacts(string title, string expected)
+    {
+        Assert.Equal(expected, NewsletterService.NormalizeDisplayTitle(title));
     }
 
     [Fact]

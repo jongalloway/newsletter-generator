@@ -34,7 +34,14 @@ internal sealed record ContentItem(
 
 internal sealed record CuratedContentItem(
     string ContentItemId,
-    string Summary);
+    string DisplayTitle,
+    string Summary)
+{
+    internal CuratedContentItem(string contentItemId, string summary)
+        : this(contentItemId, string.Empty, summary)
+    {
+    }
+}
 
 internal sealed record CuratedSection(
     string Summary,

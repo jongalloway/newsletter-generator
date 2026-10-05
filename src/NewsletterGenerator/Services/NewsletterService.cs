@@ -1408,7 +1408,9 @@ public partial class NewsletterService(
 
         var hasCategories = resolvedItems.Any(item => item.Content.Category != ContentCategory.None);
         var isFirstCategory = true;
-        foreach (var categoryGroup in resolvedItems.GroupBy(item => item.Content.Category))
+        foreach (var categoryGroup in resolvedItems
+                     .GroupBy(item => item.Content.Category)
+                     .OrderBy(group => GetContentCategorySortOrder(group.Key)))
         {
             if (hasCategories)
             {
@@ -1423,7 +1425,10 @@ public partial class NewsletterService(
 
             foreach (var (curated, content) in categoryGroup)
             {
-                var label = EscapeMarkdownLinkLabel(content.Title.Trim());
+                var displayTitle = string.IsNullOrWhiteSpace(curated.DisplayTitle)
+                    ? content.Title
+                    : curated.DisplayTitle;
+                var label = EscapeMarkdownLinkLabel(NormalizeDisplayTitle(displayTitle));
                 var description = EnsureTerminalPunctuation(curated.Summary.Trim());
                 output.AppendLine($"{itemPrefix} **[{label}]({content.Url})** - {description}");
             }
@@ -1431,6 +1436,16 @@ public partial class NewsletterService(
 
         return output.ToString().TrimEnd();
     }
+
+    private static int GetContentCategorySortOrder(ContentCategory category) => category switch
+    {
+        ContentCategory.DotNet => 0,
+        ContentCategory.AgentDevelopmentAndAzure => 1,
+        ContentCategory.GitHubAndDevTools => 2,
+        ContentCategory.OtherDeveloperUpdates => 3,
+        ContentCategory.None => 4,
+        _ => throw new ArgumentOutOfRangeException(nameof(category), category, null)
+    };
 
     internal static string GetContentCategoryHeading(ContentCategory category) => category switch
     {
@@ -1462,6 +1477,27 @@ public partial class NewsletterService(
 
         return ContentCategory.OtherDeveloperUpdates;
     }
+
+    internal static string NormalizeDisplayTitle(string title)
+    {
+        var normalized = LaunchStatusPrefixRegex().Replace(title.Trim(), string.Empty);
+        normalized = LeadingDecorativeSymbolsRegex().Replace(normalized, string.Empty);
+        normalized = TrailingHashtagsRegex().Replace(normalized, string.Empty);
+        normalized = YearWordSeparatorRegex().Replace(normalized, "$1 - $2");
+        return normalized.Trim();
+    }
+
+    [GeneratedRegex(@"^\[(?:Launched|Updated)\]\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex LaunchStatusPrefixRegex();
+
+    [GeneratedRegex(@"^(?:[\uD800-\uDBFF][\uDC00-\uDFFF]\uFE0F?)+\s*")]
+    private static partial Regex LeadingDecorativeSymbolsRegex();
+
+    [GeneratedRegex(@"\s+(?:#\w+\s*)+$")]
+    private static partial Regex TrailingHashtagsRegex();
+
+    [GeneratedRegex(@"(\b\d{4})-([A-Za-z])")]
+    private static partial Regex YearWordSeparatorRegex();
 
     private static string EscapeMarkdownLinkLabel(string value) =>
         value.Replace(@"\", @"\\", StringComparison.Ordinal)
@@ -1703,13 +1739,16 @@ public partial class NewsletterService(
             Prioritize broadly useful updates across .NET, Azure, Aspire, TypeScript, GitHub, and Microsoft developer tools.
             Avoid duplicate topics. Favor posts spanning multiple products over narrow updates.
             Write one summary sentence for the section.
-            For each selected item, write one factual summary under 20 words.
+            For each selected item, write a concise display title. Remove feed status prefixes and promotional wording,
+            but preserve product names, version numbers, release status, and the original meaning.
+            For each selected item, write one factual summary of 20-30 words when the source supports it.
+            State what changed and why it matters to developers. Do not merely restate or paraphrase the title.
             """,
             contentItems);
 
         var sourceData = System.Text.Json.JsonSerializer.Serialize(new { contentItems, model });
         return await GenerateCachedCuratedSectionAsync(
-            "devtech-blogs-v4",
+            "devtech-blogs-v6",
             sourceData,
             prompt,
             cache,
@@ -1757,7 +1796,10 @@ public partial class NewsletterService(
             Prioritize developer tools, new capabilities, AI-assisted development workflows, and community content.
             Include a useful mix of channels and avoid duplicate topics.
             Write one summary sentence for the section.
-            For each selected item, write one factual summary under 20 words.
+            For each selected item, write a concise display title. Remove hashtags, channel branding, decorative emoji,
+            and promotional wording, but preserve product names, version numbers, and the original meaning.
+            For each selected item, write one factual summary of 20-30 words when the source supports it.
+            Give the reader a concrete takeaway from the video. Do not merely restate or paraphrase the title.
             """,
             contentItems);
 
@@ -1771,7 +1813,7 @@ public partial class NewsletterService(
             model
         });
         return await GenerateCachedCuratedSectionAsync(
-            "devtech-videos-v3",
+            "devtech-videos-v5",
             sourceData,
             prompt,
             cache,
