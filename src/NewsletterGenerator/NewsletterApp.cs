@@ -280,17 +280,17 @@ internal static partial class NewsletterApp
 
     private static ProgressTask AddInactiveTask(ProgressContext ctx, string label)
     {
-        return ctx.AddTask($"[grey]{label}[/]", maxValue: 100);
+        return ctx.AddTask($"[grey]{Markup.Escape(label)}[/]", maxValue: 100);
     }
 
     private static void SetTaskActive(ProgressTask task, string label)
     {
-        task.Description = $"[cornflowerblue]{label}[/]";
+        task.Description = $"[cornflowerblue]{Markup.Escape(label)}[/]";
     }
 
     private static void SetTaskInactive(ProgressTask task, string label)
     {
-        task.Description = $"[grey]{label}[/]";
+        task.Description = $"[grey]{Markup.Escape(label)}[/]";
     }
 
     private static async Task<T> RunTrackedTaskAsync<T>(
