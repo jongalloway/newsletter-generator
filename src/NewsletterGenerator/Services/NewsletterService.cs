@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using NewsletterGenerator;
 using GitHub.Copilot;
@@ -1102,6 +1103,13 @@ public partial class NewsletterService(
         newsletter is assembled; do not add horizontal rules.
         """;
 
+    private const string DevTechCurationSystem = """
+        You curate technical newsletter content for Developer Technologies (DevTech) MVPs.
+        Select only from the supplied content items and reference each selection by its ContentItemId.
+        Write direct, factual summaries with no marketing language or hyperbole.
+        Return content data only. Do not write Markdown, headings, bullets, links, or separators.
+        """;
+
     private async Task<string> GenerateCachedSectionAsync(
         string cacheKey,
         string sourceDataJson,
@@ -1125,6 +1133,267 @@ public partial class NewsletterService(
         await cache.SaveCacheAsync(cacheKey, result, sourceHash);
         return result;
     }
+
+    private async Task<string> GenerateCachedCuratedSectionAsync(
+        string cacheKey,
+        string sourceDataJson,
+        string prompt,
+        CacheService cache,
+        string? model,
+        string displayLabel,
+        string heading,
+        IReadOnlyList<ContentItem> contentItems,
+        int minimumItems,
+        int maximumItems,
+        string itemPrefix)
+    {
+        var sourceHash = CacheService.GetContentHash(sourceDataJson);
+        var cached = await cache.TryGetCachedAsync(cacheKey, sourceHash);
+        if (cached != null)
+        {
+            AnsiConsole.MarkupLine($"[dim]Using cached {Markup.Escape(displayLabel)}[/]");
+            return cached;
+        }
+
+        AnsiConsole.MarkupLine($"[grey]Generating {Markup.Escape(displayLabel)}...[/]");
+        await using var copilot = await CreateStartedSessionAsync(
+            model,
+            SectionSynthesisOperation,
+            DevTechCurationSystem,
+            cacheKey);
+        var result = await SendTypedPromptAsync<CuratedSection>(copilot.Session, prompt, displayLabel);
+        string rendered;
+        try
+        {
+            rendered = RenderCuratedSection(
+                heading,
+                result,
+                contentItems,
+                minimumItems,
+                maximumItems,
+                itemPrefix);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogWarning(
+                ex,
+                "{DisplayLabel} returned an unusable structured response; requesting one correction",
+                displayLabel);
+            var correctionPrompt = $"""
+                Correct the previous response.
+
+                Validation error: {ex.Message}
+
+                Return a non-empty section summary and {minimumItems}-{maximumItems} unique items.
+                Use only ContentItemId values from the original prompt, and include a non-empty factual summary for each item.
+                """;
+            result = await SendTypedPromptAsync<CuratedSection>(
+                copilot.Session,
+                correctionPrompt,
+                $"{displayLabel} correction");
+            rendered = RenderCuratedSection(
+                heading,
+                result,
+                contentItems,
+                minimumItems,
+                maximumItems,
+                itemPrefix);
+        }
+        await cache.SaveCacheAsync(cacheKey, rendered, sourceHash);
+        return rendered;
+    }
+
+    private static List<ContentItem> CreateContentItems(
+        IReadOnlyList<(string SourceName, List<ReleaseEntry> Entries)> groups,
+        ContentItemType type)
+    {
+        List<ContentItem> contentItems = [];
+
+        foreach (var (sourceName, entries) in groups)
+        {
+            foreach (var entry in entries)
+            {
+                contentItems.Add(new ContentItem(
+                    $"item-{contentItems.Count + 1:D3}",
+                    type,
+                    ContentCategory.None,
+                    sourceName,
+                    entry.Version,
+                    entry.PublishedAt,
+                    entry.PlainText,
+                    entry.Url));
+            }
+        }
+
+        return contentItems;
+    }
+
+    internal static List<ContentItem> CreateContentItems(
+        IReadOnlyList<ContentSourceGroup> sources,
+        IReadOnlySet<string> excludeTitles)
+    {
+        List<ContentItem> contentItems = [];
+        var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var source in sources)
+        {
+            foreach (var entry in source.Entries)
+            {
+                if (excludeTitles.Contains(entry.Version) || !seenUrls.Add(entry.Url))
+                    continue;
+
+                contentItems.Add(new ContentItem(
+                    $"item-{contentItems.Count + 1:D3}",
+                    ContentItemType.BlogPost,
+                    source.Category == ContentCategory.None
+                        ? ResolveContentCategory(entry.Url)
+                        : source.Category,
+                    source.Name,
+                    entry.Version,
+                    entry.PublishedAt,
+                    entry.PlainText,
+                    entry.Url));
+            }
+        }
+
+        return contentItems;
+    }
+
+    internal static string BuildCuratedContentPrompt(
+        string instructions,
+        IReadOnlyList<ContentItem> contentItems)
+    {
+        var prompt = new StringBuilder(instructions.Trim());
+        prompt.AppendLine();
+        prompt.AppendLine();
+        prompt.AppendLine("Available content items:");
+
+        foreach (var group in contentItems.GroupBy(item => (item.Category, item.Type, item.SourceName)))
+        {
+            prompt.AppendLine();
+            var category = group.Key.Category == ContentCategory.None
+                ? null
+                : GetContentCategoryHeading(group.Key.Category);
+            prompt.AppendLine(category is null
+                ? $"{group.Key.Type} | {group.Key.SourceName}"
+                : $"{category} | {group.Key.SourceName}");
+            foreach (var item in group)
+            {
+                prompt.AppendLine($"[{item.Id}] {item.PublishedAt:yyyy-MM-dd} | {item.Title}");
+                if (!string.IsNullOrWhiteSpace(item.Content))
+                    prompt.AppendLine(item.Content);
+                prompt.AppendLine();
+            }
+        }
+
+        return prompt.ToString();
+    }
+
+    internal static string RenderCuratedSection(
+        string heading,
+        CuratedSection section,
+        IReadOnlyList<ContentItem> contentItems,
+        int minimumItems,
+        int maximumItems,
+        string itemPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(section.Summary))
+            throw new InvalidOperationException($"{heading} curation returned an empty summary.");
+        if (section.Items is null)
+            throw new InvalidOperationException($"{heading} curation returned no items.");
+        if (section.Items.Length < minimumItems)
+        {
+            throw new InvalidOperationException(
+                $"{heading} curation returned {section.Items.Length} items; expected at least {minimumItems}.");
+        }
+
+        var contentItemsById = contentItems.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var selectedIds = new HashSet<string>(StringComparer.Ordinal);
+        var output = new StringBuilder()
+            .AppendLine($"## {heading}")
+            .AppendLine()
+            .AppendLine(section.Summary.Trim())
+            .AppendLine();
+
+        var resolvedItems = new List<(CuratedContentItem Curated, ContentItem Content)>();
+        foreach (var item in section.Items.Take(maximumItems))
+        {
+            if (!selectedIds.Add(item.ContentItemId))
+                throw new InvalidOperationException($"{heading} curation selected {item.ContentItemId} more than once.");
+            if (!contentItemsById.TryGetValue(item.ContentItemId, out var contentItem))
+                throw new InvalidOperationException($"{heading} curation selected unknown content item {item.ContentItemId}.");
+            if (string.IsNullOrWhiteSpace(item.Summary))
+                throw new InvalidOperationException($"{heading} curation returned an item without a summary.");
+
+            resolvedItems.Add((item, contentItem));
+        }
+
+        var hasCategories = resolvedItems.Any(item => item.Content.Category != ContentCategory.None);
+        var isFirstCategory = true;
+        foreach (var categoryGroup in resolvedItems.GroupBy(item => item.Content.Category))
+        {
+            if (hasCategories)
+            {
+                if (categoryGroup.Key == ContentCategory.None)
+                    throw new InvalidOperationException($"{heading} curation selected an item without a category.");
+                if (!isFirstCategory)
+                    output.AppendLine();
+                output.AppendLine($"### {GetContentCategoryHeading(categoryGroup.Key)}");
+                output.AppendLine();
+                isFirstCategory = false;
+            }
+
+            foreach (var (curated, content) in categoryGroup)
+            {
+                var label = EscapeMarkdownLinkLabel(content.Title.Trim());
+                var description = EnsureTerminalPunctuation(curated.Summary.Trim());
+                output.AppendLine($"{itemPrefix} **[{label}]({content.Url})** - {description}");
+            }
+        }
+
+        return output.ToString().TrimEnd();
+    }
+
+    internal static string GetContentCategoryHeading(ContentCategory category) => category switch
+    {
+        ContentCategory.DotNet => ".NET",
+        ContentCategory.AgentDevelopmentAndAzure => "Agent Development and Azure",
+        ContentCategory.GitHubAndDevTools => "GitHub and DevTools",
+        ContentCategory.OtherDeveloperUpdates => "Other Developer Updates",
+        _ => throw new ArgumentOutOfRangeException(nameof(category), category, "The category has no section heading.")
+    };
+
+    internal static ContentCategory ResolveContentCategory(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return ContentCategory.OtherDeveloperUpdates;
+
+        if (uri.Host.Equals("azure.microsoft.com", StringComparison.OrdinalIgnoreCase) ||
+            uri.AbsolutePath.StartsWith("/all-things-azure/", StringComparison.OrdinalIgnoreCase) ||
+            uri.AbsolutePath.StartsWith("/agent-framework/", StringComparison.OrdinalIgnoreCase) ||
+            uri.AbsolutePath.StartsWith("/aspire/", StringComparison.OrdinalIgnoreCase))
+            return ContentCategory.AgentDevelopmentAndAzure;
+
+        if (uri.AbsolutePath.StartsWith("/dotnet/", StringComparison.OrdinalIgnoreCase))
+            return ContentCategory.DotNet;
+
+        if (uri.Host.Equals("github.blog", StringComparison.OrdinalIgnoreCase) ||
+            uri.AbsolutePath.StartsWith("/typescript/", StringComparison.OrdinalIgnoreCase) ||
+            uri.AbsolutePath.StartsWith("/visualstudio/", StringComparison.OrdinalIgnoreCase))
+            return ContentCategory.GitHubAndDevTools;
+
+        return ContentCategory.OtherDeveloperUpdates;
+    }
+
+    private static string EscapeMarkdownLinkLabel(string value) =>
+        value.Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("[", @"\[", StringComparison.Ordinal)
+            .Replace("]", @"\]", StringComparison.Ordinal);
+
+    private static string EnsureTerminalPunctuation(string value) =>
+        value.EndsWith('.') || value.EndsWith('!') || value.EndsWith('?')
+            ? value
+            : $"{value}.";
 
     public async Task<string> GenerateDevTechCopilotSectionAsync(
         List<ReleaseEntry> cliReleases,
@@ -1333,51 +1602,46 @@ public partial class NewsletterService(
             DevTechSectionSystem, prompt, cache, model, $"major release: {entry.Version}");
     }
 
-    public async Task<string> GenerateDevTechBlogsSectionAsync(
-        List<ReleaseEntry> blogEntries,
+    internal async Task<string> GenerateDevTechBlogsSectionAsync(
+        IReadOnlyList<ContentSourceGroup> contentSources,
         IReadOnlyList<string> excludeTitles,
         DateOnly weekStart,
         DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
-        var filtered = blogEntries
-            .Where(e => !excludeTitles.Contains(e.Version, StringComparer.OrdinalIgnoreCase))
-            .ToList();
-
-        if (filtered.Count == 0)
+        var excludedTitleSet = excludeTitles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var contentItems = CreateContentItems(contentSources, excludedTitleSet);
+        if (contentItems.Count == 0)
             return string.Empty;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"""
-            Generate the "Developer Blogs" section for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
+        var minimumItems = Math.Min(3, contentItems.Count);
+        var maximumItems = Math.Min(10, contentItems.Count);
+        var prompt = BuildCuratedContentPrompt(
+            $"""
+            Curate the most interesting {minimumItems}-{maximumItems} updates
+            for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
 
-            Curate the most interesting 6-10 updates across .NET, Azure, Aspire, TypeScript, GitHub Blog, and the Microsoft Developer Changelog.
-            Group by topic area. The changelog includes updates from several of the other sources, so do not repeat the same URL.
-            Be selective - only include updates that would interest an MVP audience, but lean toward including a high-quality update rather than cutting it.
-            Give extra weight to posts with broad audience appeal - for example, a post that spans multiple topics or
-            products (such as .NET plus the GitHub Copilot app) is more valuable than a narrow single-topic post and
-            should be favored when deciding what makes the cut.
-            Each bullet: - **[Title](url)** - one SHORT sentence summary (under 20 words).
-            Brevity is critical. State what changed or shipped, not background context.
+            Prioritize broadly useful updates across .NET, Azure, Aspire, TypeScript, GitHub, and Microsoft developer tools.
+            Avoid duplicate topics. Favor posts spanning multiple products over narrow updates.
+            Write one summary sentence for the section.
+            For each selected item, write one factual summary under 20 words.
+            """,
+            contentItems);
 
-            Output exactly this format:
-
-            ---
-            ## Developer Blogs
-
-            [summary sentence]
-
-            - **[Title](url)** - description.
-
-            Source material:
-
-            """);
-        AppendBlogEntries(sb, "Developer Blogs", filtered);
-
-        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { filtered, model });
-        return await GenerateCachedSectionAsync("devtech-blogs", sourceData,
-            DevTechSectionSystem, sb.ToString(), cache, model, "Developer Blogs section");
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { contentItems, model });
+        return await GenerateCachedCuratedSectionAsync(
+            "devtech-blogs-v4",
+            sourceData,
+            prompt,
+            cache,
+            model,
+            "Developer Blogs section",
+            "Developer Blogs",
+            contentItems,
+            minimumItems,
+            maximumItems,
+            "-");
     }
 
     public async Task<string> GenerateDevTechVideosSectionAsync(
@@ -1396,31 +1660,28 @@ public partial class NewsletterService(
         if (totalCount == 0)
             return string.Empty;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"""
-            Generate the "Developer Videos" section for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
+        var contentItems = CreateContentItems(
+            [
+                ("YouTube .NET", youtubeDotNetEntries),
+                ("YouTube Visual Studio", youtubeVSEntries),
+                ("YouTube VS Code", youtubeVSCodeEntries),
+                ("YouTube GitHub", youtubeGitHubEntries),
+                ("YouTube Microsoft Developer", youtubeMicrosoftDevEntries)
+            ],
+            ContentItemType.Video);
+        var minimumItems = Math.Min(6, contentItems.Count);
+        var maximumItems = Math.Min(10, contentItems.Count);
+        var prompt = BuildCuratedContentPrompt(
+            $"""
+            Select {minimumItems}-{maximumItems} of the most interesting recent videos for a DevTech MVP newsletter
+            covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
 
-            Highlight 10 of the most interesting recent videos across the channels below.
-            Focus on videos relevant to MVPs: developer tools, new features, AI + dev workflows, community content.
-            Each video entry MUST use a 📺 emoji prefix (not a dash bullet).
-
-            Output exactly this format:
-
-            ---
-            ## Developer Videos
-
-            [summary sentence]
-
-            📺 **[Video title](url)** - description.
-
-            Source material:
-
-            """);
-        AppendBlogEntries(sb, "YouTube .NET Channel Videos", youtubeDotNetEntries);
-        AppendBlogEntries(sb, "YouTube Visual Studio Videos", youtubeVSEntries);
-        AppendBlogEntries(sb, "YouTube VS Code Videos", youtubeVSCodeEntries);
-        AppendBlogEntries(sb, "YouTube GitHub Videos", youtubeGitHubEntries);
-        AppendBlogEntries(sb, "YouTube Microsoft Developer Videos", youtubeMicrosoftDevEntries);
+            Prioritize developer tools, new capabilities, AI-assisted development workflows, and community content.
+            Include a useful mix of channels and avoid duplicate topics.
+            Write one summary sentence for the section.
+            For each selected item, write one factual summary under 20 words.
+            """,
+            contentItems);
 
         var sourceData = System.Text.Json.JsonSerializer.Serialize(new
         {
@@ -1431,8 +1692,18 @@ public partial class NewsletterService(
             youtubeMicrosoftDevEntries,
             model
         });
-        return await GenerateCachedSectionAsync("devtech-videos", sourceData,
-            DevTechSectionSystem, sb.ToString(), cache, model, "Developer Videos section");
+        return await GenerateCachedCuratedSectionAsync(
+            "devtech-videos-v3",
+            sourceData,
+            prompt,
+            cache,
+            model,
+            "Developer Videos section",
+            "Developer Videos",
+            contentItems,
+            minimumItems,
+            maximumItems,
+            "📺");
     }
 
     public async Task<string> GenerateDevTechWelcomeAsync(
@@ -1560,6 +1831,60 @@ public partial class NewsletterService(
         if (string.IsNullOrWhiteSpace(result))
             logger.LogWarning("SendPromptAsync: AI returned empty response for prompt starting with: {PromptStart}",
                 prompt.Length > 200 ? prompt[..200] : prompt);
+        return result;
+    }
+
+    private async Task<TResult> SendTypedPromptAsync<TResult>(
+        CopilotSession session,
+        string prompt,
+        string operation)
+    {
+        logger.LogDebug(
+            "SendTypedPromptAsync: sending prompt for {Operation} ({Length} chars, response={ResponseType})",
+            operation,
+            prompt.Length,
+            typeof(TResult).Name);
+        string? latestMessageId = null;
+        var eventCount = 0;
+        var streamedChars = 0;
+
+        using var subscription = session.On<SessionEvent>(evt =>
+        {
+            switch (evt)
+            {
+                case AssistantMessageDeltaEvent delta:
+                    streamedChars += delta.Data.DeltaContent?.Length ?? 0;
+                    break;
+                case AssistantMessageEvent message:
+                    eventCount++;
+                    latestMessageId = message.Data.MessageId;
+                    break;
+                case SessionErrorEvent error:
+                    logger.LogError("Copilot session error: {Message}", error.Data.Message);
+                    break;
+            }
+        });
+
+#pragma warning disable GHCP001
+        var result = await session.SendAndWaitAsync<TResult>(
+            prompt,
+            timeout: TimeSpan.FromSeconds(180));
+#pragma warning restore GHCP001
+        if (result is null)
+            throw new InvalidOperationException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
+        var responseCharacters = JsonSerializer.Serialize(result).Length;
+        logger.LogInformation(
+            "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
+            typeof(TResult).Name,
+            responseCharacters,
+            eventCount,
+            streamedChars);
+        await TryCaptureUsageMetricsAsync(
+            session,
+            operation,
+            prompt.Length,
+            responseCharacters,
+            latestMessageId);
         return result;
     }
 

@@ -275,6 +275,7 @@ This project uses the [GitHub.Copilot.SDK](https://www.nuget.org/packages/GitHub
 | **Streaming** | All AI sessions (`Streaming = true`) | Enables incremental response delivery; delta events are logged for diagnostics |
 | **ReasoningEffort profiles** | `ResolveReasoningEffort(operationProfile)`, `ReasoningEffort = reasoningEffort` | Uses low/medium/high profiles by operation so short summaries stay cheaper and larger sections get more headroom |
 | **SendAndWaitAsync** | `session.SendAndWaitAsync(new MessageOptions { Prompt = prompt })`, `AssistantMessageEvent`, `AssistantMessageDeltaEvent`, `SessionIdleEvent`, `SessionErrorEvent` | Submits prompts and waits for the final assistant message while still streaming deltas and idle events |
+| **Typed structured output** | `SendTypedPromptAsync<CuratedSection>(...)` for DevTech blog and video curation | Returns only selected content item IDs and summaries; C# restores feed-backed categories, titles, URLs, and deterministic Markdown |
 | **Session hooks** | `OnErrorOccurred`, `OnSessionStart`, `OnSessionEnd` | SDK-level error retry and session lifecycle logging without manual plumbing |
 | **Deterministic session resume** | `BuildSessionId(runContext, workflowStep, model)`, `ResumeSessionAsync(...)` | Reuses the last matching session for repeat runs when a workflow step and run context are available |
 | **ClientName** | All AI sessions (`ClientName = "newsletter-generator"`) | Tags requests with a stable application identity, which is useful for diagnostics and example code |
@@ -287,3 +288,5 @@ This project uses the [GitHub.Copilot.SDK](https://www.nuget.org/packages/GitHub
 | **Infinite sessions (interactive revisions)** | `InfiniteSessions = new InfiniteSessionConfig { Enabled = true }`, `--infinite-sessions` | Keeps multi-pass revision loops in a single long-running session |
 | **Event-driven responses** | `AssistantMessageEvent`, `AssistantMessageDeltaEvent`, `SessionIdleEvent`, `SessionErrorEvent` | Collect final responses and streaming deltas via pattern matching |
 | **GetAuthStatusAsync** | Startup status table | Display authentication state before generation |
+
+The DevTech blog and video generators send content item IDs, titles, and text without URLs or Markdown format examples. Typed responses return only selected IDs, item summaries, and a section summary. The application validates those IDs, restores feed-backed categories and authoritative titles and URLs, then renders the final Markdown. The run dashboard reports prompt and response character counts and includes exact token counts when the SDK provides them.

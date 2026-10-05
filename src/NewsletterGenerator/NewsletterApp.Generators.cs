@@ -866,11 +866,22 @@ internal static partial class NewsletterApp
             loggerFactory.CreateLogger<NewsletterService>(),
             BuildRunContextKey(NewsletterType.DevTechMVP, weekStart, weekEnd));
 
-        // Detect major releases from blog pool
-        List<ReleaseEntry> blogPool = [..dotNetBlogEntries, ..devBlogEntries, ..azureBlogEntries,
-            ..aspireBlogEntries, ..typeScriptBlogEntries, ..agentFxBlogEntries, ..githubBlogEntries];
-        var developerUpdatesPool = blogPool
-            .Concat(developerChangelogEntries)
+        List<ContentSourceGroup> developerContentSources =
+        [
+            new(".NET Blog", ContentCategory.DotNet, dotNetBlogEntries),
+            new("Azure Blog", ContentCategory.AgentDevelopmentAndAzure, azureBlogEntries),
+            new("Aspire Blog", ContentCategory.AgentDevelopmentAndAzure, aspireBlogEntries),
+            new("Agent Framework Blog", ContentCategory.AgentDevelopmentAndAzure, agentFxBlogEntries),
+            new("TypeScript Blog", ContentCategory.GitHubAndDevTools, typeScriptBlogEntries),
+            new("GitHub Blog", ContentCategory.GitHubAndDevTools, githubBlogEntries),
+            new("Microsoft Developer Changelog", ContentCategory.None, developerChangelogEntries),
+            new("Microsoft Developer Blog", ContentCategory.None, devBlogEntries)
+        ];
+
+        // Specific feeds precede the general Developer Blog so URL deduplication retains
+        // the most useful deterministic category for posts syndicated to both feeds.
+        var blogPool = developerContentSources
+            .SelectMany(source => source.Entries)
             .DistinctBy(entry => entry.Url, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var majorReleases = NewsletterService.DetectMajorReleases(blogPool);
@@ -938,7 +949,7 @@ internal static partial class NewsletterApp
 
             var blogsWork = RunTrackedTaskAsync(blogsTask, blogsLabel,
                 () => newsletterService.GenerateDevTechBlogsSectionAsync(
-                    developerUpdatesPool, majorReleaseTitles, weekStart, weekEnd, cache, selectedModel),
+                    developerContentSources, majorReleaseTitles, weekStart, weekEnd, cache, selectedModel),
                 metrics, "Generate: Developer Blogs section");
 
             var videosWork = RunTrackedTaskAsync(videosTask, videosLabel,
