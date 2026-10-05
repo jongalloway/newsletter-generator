@@ -300,7 +300,7 @@ internal static partial class NewsletterApp
         }
 
         var hints = new Panel(
-            "- Verify Copilot auth: [white]copilot auth status[/]\n" +
+            "- Verify Copilot auth: [white]dotnet run -- doctor[/]\n" +
             "- Verify CLI is on PATH: [white]copilot --version[/]\n" +
             "- Check network access to GitHub feeds")
             .Header("[yellow]Troubleshooting[/]")
