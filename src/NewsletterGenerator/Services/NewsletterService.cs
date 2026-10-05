@@ -1147,8 +1147,12 @@ public partial class NewsletterService(
         }
 
         AnsiConsole.MarkupLine($"[grey]Generating {Markup.Escape(displayLabel)}...[/]");
-        await using var copilot = await CreateStartedSessionAsync(model, SectionSynthesisOperation, systemMessage, cacheKey);
-        var result = await SendPromptAsync(copilot.Session, prompt, displayLabel);
+        var result = await ExecuteWithFreshSessionRetryAsync(
+            model,
+            SectionSynthesisOperation,
+            systemMessage,
+            cacheKey,
+            session => SendPromptAsync(session, prompt, displayLabel));
         await cache.SaveCacheAsync(cacheKey, result, sourceHash);
         return result;
     }
@@ -1175,51 +1179,106 @@ public partial class NewsletterService(
         }
 
         AnsiConsole.MarkupLine($"[grey]Generating {Markup.Escape(displayLabel)}...[/]");
-        await using var copilot = await CreateStartedSessionAsync(
+        var rendered = await ExecuteWithFreshSessionRetryAsync(
             model,
             SectionSynthesisOperation,
             DevTechCurationSystem,
-            cacheKey);
-        var result = await SendTypedPromptAsync<CuratedSection>(copilot.Session, prompt, displayLabel);
-        string rendered;
-        try
-        {
-            rendered = RenderCuratedSection(
-                heading,
-                result,
-                contentItems,
-                minimumItems,
-                maximumItems,
-                itemPrefix);
-        }
-        catch (InvalidOperationException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "{DisplayLabel} returned an unusable structured response; requesting one correction",
-                displayLabel);
-            var correctionPrompt = $"""
-                Correct the previous response.
+            cacheKey,
+            async session =>
+            {
+                var result = await SendTypedPromptAsync<CuratedSection>(session, prompt, displayLabel);
+                try
+                {
+                    return RenderCuratedSection(
+                        heading,
+                        result,
+                        contentItems,
+                        minimumItems,
+                        maximumItems,
+                        itemPrefix);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "{DisplayLabel} returned an unusable structured response; requesting one correction",
+                        displayLabel);
+                    var correctionPrompt = $"""
+                        Correct the previous response.
 
-                Validation error: {ex.Message}
+                        Validation error: {ex.Message}
 
-                Return a non-empty section summary and {minimumItems}-{maximumItems} unique items.
-                Use only ContentItemId values from the original prompt, and include a non-empty factual summary for each item.
-                """;
-            result = await SendTypedPromptAsync<CuratedSection>(
-                copilot.Session,
-                correctionPrompt,
-                $"{displayLabel} correction");
-            rendered = RenderCuratedSection(
-                heading,
-                result,
-                contentItems,
-                minimumItems,
-                maximumItems,
-                itemPrefix);
-        }
+                        Return a non-empty section summary and {minimumItems}-{maximumItems} unique items.
+                        Use only ContentItemId values from the original prompt, and include a non-empty factual summary for each item.
+                        """;
+                    result = await SendTypedPromptAsync<CuratedSection>(
+                        session,
+                        correctionPrompt,
+                        $"{displayLabel} correction");
+                    return RenderCuratedSection(
+                        heading,
+                        result,
+                        contentItems,
+                        minimumItems,
+                        maximumItems,
+                        itemPrefix);
+                }
+            });
         await cache.SaveCacheAsync(cacheKey, rendered, sourceHash);
         return rendered;
+    }
+
+    private async Task<TResult> ExecuteWithFreshSessionRetryAsync<TResult>(
+        string? model,
+        string operationProfile,
+        string systemMessage,
+        string workflowStep,
+        Func<CopilotSession, Task<TResult>> operation)
+    {
+        StartedSession? startedSession = await CreateStartedSessionAsync(
+            model,
+            operationProfile,
+            systemMessage,
+            workflowStep);
+
+        try
+        {
+            try
+            {
+                return await operation(startedSession.Session);
+            }
+            catch (Exception ex) when (IsCredentialSessionError(ex))
+            {
+                logger.LogWarning(
+                    ex,
+                    "Session credentials were unavailable for {WorkflowStep}; retrying once with a fresh session",
+                    workflowStep);
+                await startedSession.DisposeAsync();
+                startedSession = null;
+                startedSession = await CreateStartedSessionAsync(
+                    model,
+                    operationProfile,
+                    systemMessage);
+                return await operation(startedSession.Session);
+            }
+        }
+        finally
+        {
+            if (startedSession is not null)
+                await startedSession.DisposeAsync();
+        }
+    }
+
+    internal static bool IsCredentialSessionError(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.Message.Contains("No GitHub OAuth token", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("Copilot HMAC key", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static List<ContentItem> CreateContentItems(

@@ -42,4 +42,26 @@ public class NewsletterServiceTests
     {
         Assert.Equal(expected, NewsletterService.ShouldRetrySessionError(recoverable, error));
     }
+
+    [Theory]
+    [InlineData("Session error: No GitHub OAuth token or Copilot HMAC key provided", true)]
+    [InlineData("Copilot HMAC key unavailable", true)]
+    [InlineData("Request timed out", false)]
+    [InlineData("InvalidArg: unsupported request", false)]
+    public void IsCredentialSessionError_ReturnsExpectedResult(string message, bool expected)
+    {
+        Assert.Equal(
+            expected,
+            NewsletterService.IsCredentialSessionError(new InvalidOperationException(message)));
+    }
+
+    [Fact]
+    public void IsCredentialSessionError_ExaminesInnerExceptions()
+    {
+        var exception = new Exception(
+            "Outer failure",
+            new InvalidOperationException("No GitHub OAuth token provided"));
+
+        Assert.True(NewsletterService.IsCredentialSessionError(exception));
+    }
 }
