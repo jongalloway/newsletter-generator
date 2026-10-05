@@ -52,10 +52,17 @@ public partial class NewsletterService(
     {
         OnErrorOccurred = (input, invocation) =>
         {
-            logger.LogWarning("Session error in {Context}: {Error}", input.ErrorContext, input.Error);
+            var shouldRetry = ShouldRetrySessionError(input.Recoverable, input.Error);
+            logger.LogWarning(
+                "Session error in {Context} (recoverable={Recoverable}, handling={Handling}): {Error}",
+                input.ErrorContext,
+                input.Recoverable,
+                shouldRetry ? "retry" : "abort",
+                input.Error);
             return Task.FromResult<ErrorOccurredHookOutput?>(new ErrorOccurredHookOutput
             {
-                ErrorHandling = "retry"
+                ErrorHandling = shouldRetry ? "retry" : "abort",
+                RetryCount = shouldRetry ? 2 : 0
             });
         },
         OnSessionStart = (input, invocation) =>
@@ -69,6 +76,18 @@ public partial class NewsletterService(
             return Task.FromResult<SessionEndHookOutput?>(null);
         }
     };
+
+    internal static bool ShouldRetrySessionError(bool recoverable, string? error)
+    {
+        if (!recoverable || string.IsNullOrWhiteSpace(error))
+            return false;
+
+        return !error.Contains("InvalidArg", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("OAuth token", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("HMAC key", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("unauthorized", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("authentication", StringComparison.OrdinalIgnoreCase);
+    }
 
     internal static string ResolveReasoningEffort(string operationProfile) => operationProfile switch
     {

@@ -26,4 +26,20 @@ public class NewsletterServiceTests
 
         Assert.Equal("medium", actual);
     }
+
+    [Theory]
+    [InlineData(false, "temporarily unavailable", false)]
+    [InlineData(true, "temporarily unavailable", true)]
+    [InlineData(true, "InvalidArg: unsupported request", false)]
+    [InlineData(true, "No GitHub OAuth token or Copilot HMAC key provided", false)]
+    [InlineData(true, "authentication failed", false)]
+    [InlineData(true, "unauthorized", false)]
+    [InlineData(true, "", false)]
+    public void ShouldRetrySessionError_ReturnsExpectedHandling(
+        bool recoverable,
+        string error,
+        bool expected)
+    {
+        Assert.Equal(expected, NewsletterService.ShouldRetrySessionError(recoverable, error));
+    }
 }
