@@ -1,3 +1,4 @@
+using System.Text.Json;
 using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;
 
@@ -64,6 +65,18 @@ public class NewsletterServiceTests
             new InvalidOperationException("No GitHub OAuth token provided"));
 
         Assert.True(NewsletterService.IsCredentialSessionError(exception));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void IsTypedResponseParsingFailure_OnlyMatchesJsonExceptions(bool jsonFailure)
+    {
+        Exception exception = jsonFailure
+            ? new JsonException("The structured response was invalid.")
+            : new InvalidOperationException("The session reported an error.");
+
+        Assert.Equal(jsonFailure, NewsletterService.IsTypedResponseParsingFailure(exception));
     }
 
     [Fact]

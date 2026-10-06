@@ -1308,7 +1308,44 @@ public partial class NewsletterService(
             cacheKey,
             async session =>
             {
-                var result = await SendTypedPromptAsync<CuratedSection>(session, prompt, displayLabel);
+                async Task<string> RequestCorrectionAsync(Exception exception)
+                {
+                    logger.LogWarning(
+                        exception,
+                        "{DisplayLabel} returned an unusable structured response; requesting one correction",
+                        displayLabel);
+                    var correctionPrompt = $"""
+                        Correct the previous response.
+
+                        Validation error: {exception.Message}
+
+                        Return a non-empty section summary and {minimumItems}-{maximumItems} unique items.
+                        Use only ContentItemId values from the original prompt, and include a non-empty factual summary for each item.
+                        """;
+                    var correctedResult = await SendTypedPromptAsync<CuratedSection>(
+                        session,
+                        correctionPrompt,
+                        $"{displayLabel} correction");
+                    return RenderCuratedSection(
+                        heading,
+                        correctedResult,
+                        contentItems,
+                        minimumItems,
+                        maximumItems,
+                        itemPrefix,
+                        useHardLineBreaks);
+                }
+
+                CuratedSection result;
+                try
+                {
+                    result = await SendTypedPromptAsync<CuratedSection>(session, prompt, displayLabel);
+                }
+                catch (Exception ex) when (IsTypedResponseParsingFailure(ex))
+                {
+                    return await RequestCorrectionAsync(ex);
+                }
+
                 try
                 {
                     return RenderCuratedSection(
@@ -1322,35 +1359,15 @@ public partial class NewsletterService(
                 }
                 catch (InvalidOperationException ex)
                 {
-                    logger.LogWarning(
-                        ex,
-                        "{DisplayLabel} returned an unusable structured response; requesting one correction",
-                        displayLabel);
-                    var correctionPrompt = $"""
-                        Correct the previous response.
-
-                        Validation error: {ex.Message}
-
-                        Return a non-empty section summary and {minimumItems}-{maximumItems} unique items.
-                        Use only ContentItemId values from the original prompt, and include a non-empty factual summary for each item.
-                        """;
-                    result = await SendTypedPromptAsync<CuratedSection>(
-                        session,
-                        correctionPrompt,
-                        $"{displayLabel} correction");
-                    return RenderCuratedSection(
-                        heading,
-                        result,
-                        contentItems,
-                        minimumItems,
-                        maximumItems,
-                        itemPrefix,
-                        useHardLineBreaks);
+                    return await RequestCorrectionAsync(ex);
                 }
             });
         await cache.SaveCacheAsync(cacheKey, rendered, sourceHash);
         return rendered;
     }
+
+    internal static bool IsTypedResponseParsingFailure(Exception exception) =>
+        exception is JsonException;
 
     private async Task<TResult> ExecuteWithFreshSessionRetryAsync<TResult>(
         string? model,
@@ -2119,7 +2136,7 @@ public partial class NewsletterService(
             timeout: TimeSpan.FromSeconds(180));
 #pragma warning restore GHCP001
         if (result is null)
-            throw new InvalidOperationException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
+            throw new JsonException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
         var responseCharacters = JsonSerializer.Serialize(result).Length;
         logger.LogInformation(
             "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
