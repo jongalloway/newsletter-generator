@@ -1095,7 +1095,7 @@ public partial class NewsletterService(
 
     // ── DevTech MVP multi-prompt section generation ────────────────────────
 
-    [GeneratedRegex(@"\b(?:announc\w*|releas\w*|ship\w*|launch\w*|generally\s+available|now\s+available|introducing)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:announc\w*|releas\w*|ship\w*|launch\w*|generally\s+available|now\s+available|introducing|preview\s*\d*|RC\s*\d*|GA|stable|is\s+here|what(?:'|’)s\s+new)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ReleaseKeywordPattern();
 
     [GeneratedRegex(@"\bsupport\s+for\b.*(?:\d+\.\d+|\.NET\s+\d+)", RegexOptions.IgnoreCase)]
@@ -1125,15 +1125,55 @@ public partial class NewsletterService(
     [GeneratedRegex(@"\bSkiaSharp\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
     private static partial Regex SkiaSharpMajorReleasePattern();
 
+    [GeneratedRegex(@"\bMicrosoft\.Extensions\.(?:AI|VectorData)\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex MicrosoftExtensionsAiMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:Windows App SDK|Windows App Runtime|WinUI|WinApp CLI)\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex WindowsAppMajorReleasePattern();
+
+    [GeneratedRegex(@"\bSemantic Kernel\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex SemanticKernelMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:Microsoft\s+)?Orleans\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex OrleansMajorReleasePattern();
+
+    [GeneratedRegex(@"\bNuGet\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex NuGetMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:Azure Developer CLI|azd)\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureDeveloperCliMajorReleasePattern();
+
+    [GeneratedRegex(@"\bAzure Functions(?:\s+(?:runtime|host))?\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureFunctionsMajorReleasePattern();
+
+    [GeneratedRegex(@"\bBicep\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex BicepMajorReleasePattern();
+
+    [GeneratedRegex(@"\bMicrosoft Foundry(?:\s+(?:SDK|tooling|extension|Agent Service))?\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex MicrosoftFoundryMajorReleasePattern();
+
+    [GeneratedRegex(@"\.NET MAUI\s+[1-9]\d*(?:\.\d+)*", RegexOptions.IgnoreCase)]
+    private static partial Regex DotNetMauiMajorReleasePattern();
+
     private static bool IsSupportedMajorReleaseProduct(string title) =>
         DotNetMajorReleasePattern().IsMatch(title) ||
+        DotNetMauiMajorReleasePattern().IsMatch(title) ||
         AspireMajorReleasePattern().IsMatch(title) ||
         TypeScriptMajorReleasePattern().IsMatch(title) ||
         PowerShellMajorReleasePattern().IsMatch(title) ||
         AzureSphereMajorReleasePattern().IsMatch(title) ||
         AgentFrameworkMajorReleasePattern().IsMatch(title) ||
         McpCSharpSdkMajorReleasePattern().IsMatch(title) ||
-        SkiaSharpMajorReleasePattern().IsMatch(title);
+        SkiaSharpMajorReleasePattern().IsMatch(title) ||
+        MicrosoftExtensionsAiMajorReleasePattern().IsMatch(title) ||
+        WindowsAppMajorReleasePattern().IsMatch(title) ||
+        SemanticKernelMajorReleasePattern().IsMatch(title) ||
+        OrleansMajorReleasePattern().IsMatch(title) ||
+        NuGetMajorReleasePattern().IsMatch(title) ||
+        AzureDeveloperCliMajorReleasePattern().IsMatch(title) ||
+        AzureFunctionsMajorReleasePattern().IsMatch(title) ||
+        BicepMajorReleasePattern().IsMatch(title) ||
+        MicrosoftFoundryMajorReleasePattern().IsMatch(title);
 
     internal static List<ReleaseEntry> DetectMajorReleases(List<ReleaseEntry> blogEntries)
     {

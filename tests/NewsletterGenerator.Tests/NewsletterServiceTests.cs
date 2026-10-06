@@ -179,6 +179,21 @@ public class NewsletterServiceTests
     [InlineData("Microsoft Agent Framework releasing version 1.0")]
     [InlineData("Announcing v2.0 of the official MCP C# SDK")]
     [InlineData("SkiaSharp 4.0 is here: announcing the first stable release")]
+    [InlineData("Microsoft.Extensions.AI 10.0 released")]
+    [InlineData("Microsoft.Extensions.VectorData 10.0 is generally available")]
+    [InlineData("Windows App SDK 2.0 released")]
+    [InlineData("Windows App Runtime 2.0 is now available")]
+    [InlineData("WinUI 4.0 released")]
+    [InlineData("WinApp CLI 2.0 released")]
+    [InlineData("Semantic Kernel 2.0 released")]
+    [InlineData("Microsoft Orleans 10.0 released")]
+    [InlineData("NuGet 8.0 released")]
+    [InlineData("Azure Developer CLI 2.0 released")]
+    [InlineData("azd 2.0 released")]
+    [InlineData("Azure Functions host 5.0 released")]
+    [InlineData("Bicep 1.0 released")]
+    [InlineData("Microsoft Foundry SDK 2.0 released")]
+    [InlineData(".NET MAUI 12 Preview 1")]
     public void DetectMajorReleases_IncludesSupportedProductFamilies(string title)
     {
         var release = CreateRelease(title);

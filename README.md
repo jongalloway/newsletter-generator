@@ -29,7 +29,7 @@ The output is a markdown newsletter. Sections vary by newsletter type:
 
 - **Copilot CLI/SDK** — Welcome, News & Announcements, Project Updates
 - **VS Code** — Welcome, This Week in VS Code Stable, VS Code Insiders Highlights, News and Announcements (if applicable)
-- **DevTech MVP** — Welcome, Copilot CLI & SDK, VS Code, Visual Studio, Major Releases (auto-detected), Developer Blogs, Developer Videos
+- **DevTech MVP** — Welcome, Copilot CLI & SDK, VS Code, Visual Studio, recognized major product releases, Developer Blogs, Developer Videos
 
 ## Information flow
 
@@ -260,6 +260,8 @@ The tool fetches from these sources:
 - **Agent Framework Blog**: <https://devblogs.microsoft.com/agent-framework/feed/>
 - **YouTube channels**: .NET, Visual Studio, VS Code, GitHub, Microsoft Dev
 - **Visual Studio release notes**: <https://learn.microsoft.com/visualstudio/releases/2026/release-notes>
+
+Dedicated major-release sections use an explicit product allowlist rather than matching arbitrary version numbers. Eligible families include .NET, Aspire, TypeScript, PowerShell, Azure Sphere OS, Microsoft Agent Framework, MCP C# SDK, SkiaSharp, Microsoft.Extensions.AI and VectorData, Windows App SDK and WinUI tooling, Semantic Kernel, Orleans, NuGet, Azure Developer CLI, Azure Functions runtime, Bicep, Microsoft Foundry SDK tooling, and .NET MAUI. Products with permanent newsletter sections remain in those sections.
 
 Filtering rules and summarization prompts can be modified in:
 
