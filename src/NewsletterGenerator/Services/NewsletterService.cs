@@ -1143,7 +1143,7 @@ public partial class NewsletterService(
         if (cached != null)
         {
             AnsiConsole.MarkupLine($"[dim]Using cached {Markup.Escape(displayLabel)}[/]");
-            return cached;
+            return NormalizeMarkdownListSpacing(cached);
         }
 
         AnsiConsole.MarkupLine($"[grey]Generating {Markup.Escape(displayLabel)}...[/]");
@@ -1153,9 +1153,55 @@ public partial class NewsletterService(
             systemMessage,
             cacheKey,
             session => SendPromptAsync(session, prompt, displayLabel));
+        result = NormalizeMarkdownListSpacing(result);
         await cache.SaveCacheAsync(cacheKey, result, sourceHash);
         return result;
     }
+
+    internal static string NormalizeMarkdownListSpacing(string markdown)
+    {
+        var newline = markdown.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var output = new List<string>(lines.Length);
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index];
+            var isListItem = MarkdownListItemRegex().IsMatch(line);
+            var previousIsListItem = index > 0 && MarkdownListItemRegex().IsMatch(lines[index - 1]);
+            var nextIsListItem = index + 1 < lines.Length && MarkdownListItemRegex().IsMatch(lines[index + 1]);
+            var previousIsIndented = index > 0 && IsIndentedMarkdownLine(lines[index - 1]);
+            var nextIsIndented = index + 1 < lines.Length && IsIndentedMarkdownLine(lines[index + 1]);
+
+            if (isListItem &&
+                index > 0 &&
+                !string.IsNullOrWhiteSpace(lines[index - 1]) &&
+                !previousIsListItem &&
+                !previousIsIndented)
+            {
+                output.Add(string.Empty);
+            }
+
+            output.Add(line);
+
+            if (isListItem &&
+                index + 1 < lines.Length &&
+                !string.IsNullOrWhiteSpace(lines[index + 1]) &&
+                !nextIsListItem &&
+                !nextIsIndented)
+            {
+                output.Add(string.Empty);
+            }
+        }
+
+        return string.Join(newline, output);
+    }
+
+    private static bool IsIndentedMarkdownLine(string line) =>
+        line.Length > 0 && char.IsWhiteSpace(line[0]);
+
+    [GeneratedRegex(@"^\s*(?:[-+*]|\d+\.)\s+")]
+    private static partial Regex MarkdownListItemRegex();
 
     private async Task<string> GenerateCachedCuratedSectionAsync(
         string cacheKey,

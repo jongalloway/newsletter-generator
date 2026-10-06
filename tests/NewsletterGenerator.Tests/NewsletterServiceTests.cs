@@ -64,4 +64,63 @@ public class NewsletterServiceTests
 
         Assert.True(NewsletterService.IsCredentialSessionError(exception));
     }
+
+    [Fact]
+    public void NormalizeMarkdownListSpacing_SurroundsListWithoutSeparatingItems()
+    {
+        var markdown = string.Join(
+            Environment.NewLine,
+            "## Release",
+            "",
+            "Release summary.",
+            "- First item",
+            "- Second item",
+            "Following content.");
+
+        var normalized = NewsletterService.NormalizeMarkdownListSpacing(markdown);
+
+        Assert.Equal(
+            string.Join(
+                Environment.NewLine,
+                "## Release",
+                "",
+                "Release summary.",
+                "",
+                "- First item",
+                "- Second item",
+                "",
+                "Following content."),
+            normalized);
+    }
+
+    [Fact]
+    public void NormalizeMarkdownListSpacing_PreservesAlreadySpacedLists()
+    {
+        const string markdown = """
+            Intro.
+
+            1. First item
+            2. Second item
+
+            Outro.
+            """;
+
+        Assert.Equal(markdown, NewsletterService.NormalizeMarkdownListSpacing(markdown));
+    }
+
+    [Fact]
+    public void NormalizeMarkdownListSpacing_PreservesIndentedListContinuation()
+    {
+        const string markdown = """
+            Intro.
+
+            - Item
+              continuation
+              - Nested item
+
+            Outro.
+            """;
+
+        Assert.Equal(markdown, NewsletterService.NormalizeMarkdownListSpacing(markdown));
+    }
 }

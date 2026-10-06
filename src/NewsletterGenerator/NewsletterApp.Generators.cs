@@ -1014,6 +1014,7 @@ internal static partial class NewsletterApp
                 continue;
 
             contentBuilder.AppendLine("---");
+            contentBuilder.AppendLine();
             contentBuilder.AppendLine(normalizedSection);
             contentBuilder.AppendLine();
         }
