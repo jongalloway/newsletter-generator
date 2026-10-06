@@ -1,3 +1,4 @@
+using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;
 
 namespace NewsletterGenerator.Tests;
@@ -123,4 +124,81 @@ public class NewsletterServiceTests
 
         Assert.Equal(markdown, NewsletterService.NormalizeMarkdownListSpacing(markdown));
     }
+
+    [Fact]
+    public void DetectMajorReleases_ExcludesModelAvailabilityAndVersionSupportAnnouncements()
+    {
+        var entries = new List<ReleaseEntry>
+        {
+            CreateRelease("Claude Opus 5.5 is now available in GitHub Copilot"),
+            CreateRelease("Grok 4.7 is now available in GitHub Copilot"),
+            CreateRelease("[Launched] Generally Available: Azure Functions support for PowerShell 7.6"),
+            CreateRelease("[Launched] Generally Available: Azure Sphere OS version 26.09 is now available")
+        };
+
+        var releases = NewsletterService.DetectMajorReleases(entries);
+
+        var release = Assert.Single(releases);
+        Assert.Equal(
+            "[Launched] Generally Available: Azure Sphere OS version 26.09 is now available",
+            release.Version);
+    }
+
+    [Fact]
+    public void DetectMajorReleases_IncludesDotNetReleaseCandidatesWithoutDottedVersions()
+    {
+        var release = CreateRelease("Announcing .NET 11 Release Candidate 1");
+
+        var releases = NewsletterService.DetectMajorReleases([release]);
+
+        Assert.Same(release, Assert.Single(releases));
+    }
+
+    [Fact]
+    public void DetectMajorReleases_ExcludesPreOneComponentReleases()
+    {
+        var release = CreateRelease("Actions Runner Controller release 0.15.0");
+
+        Assert.Empty(NewsletterService.DetectMajorReleases([release]));
+    }
+
+    [Fact]
+    public void DetectMajorReleases_ExcludesUnsupportedProductsWithStableVersions()
+    {
+        var release = CreateRelease("Actions Runner Controller release 1.15.0");
+
+        Assert.Empty(NewsletterService.DetectMajorReleases([release]));
+    }
+
+    [Theory]
+    [InlineData("Announcing .NET 11 Release Candidate 1")]
+    [InlineData("Aspire 13.6 released")]
+    [InlineData("TypeScript 6.0 released")]
+    [InlineData("PowerShell 7.6 released")]
+    [InlineData("Azure Sphere OS version 26.09 is generally available")]
+    [InlineData("Microsoft Agent Framework releasing version 1.0")]
+    [InlineData("Announcing v2.0 of the official MCP C# SDK")]
+    [InlineData("SkiaSharp 4.0 is here: announcing the first stable release")]
+    public void DetectMajorReleases_IncludesSupportedProductFamilies(string title)
+    {
+        var release = CreateRelease(title);
+
+        Assert.Same(release, Assert.Single(NewsletterService.DetectMajorReleases([release])));
+    }
+
+    [Theory]
+    [InlineData("Visual Studio 18.0 released")]
+    [InlineData("VS Code 1.141 released")]
+    [InlineData("Copilot SDK v1.0.0 released")]
+    public void DetectMajorReleases_ExcludesProductsWithExistingNewsletterSections(string title)
+    {
+        Assert.Empty(NewsletterService.DetectMajorReleases([CreateRelease(title)]));
+    }
+
+    private static ReleaseEntry CreateRelease(string title) =>
+        new(
+            title,
+            new DateOnly(2026, 10, 1),
+            "Release details.",
+            $"https://example.com/{Uri.EscapeDataString(title)}");
 }

@@ -1095,18 +1095,53 @@ public partial class NewsletterService(
 
     // ── DevTech MVP multi-prompt section generation ────────────────────────
 
-    [GeneratedRegex(@"\d+\.\d+")]
-    private static partial Regex MajorVersionPattern();
-
-    [GeneratedRegex(@"\b(announc|releas|ship|launch|generally.available|now.available|introducing)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:announc\w*|releas\w*|ship\w*|launch\w*|generally\s+available|now\s+available|introducing)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ReleaseKeywordPattern();
+
+    [GeneratedRegex(@"\bsupport\s+for\b.*(?:\d+\.\d+|\.NET\s+\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex VersionSupportAnnouncementPattern();
+
+    [GeneratedRegex(@"\.NET(?:\s+Core)?\s+[1-9]\d*(?:\.\d+)*", RegexOptions.IgnoreCase)]
+    private static partial Regex DotNetMajorReleasePattern();
+
+    [GeneratedRegex(@"\bAspire\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AspireMajorReleasePattern();
+
+    [GeneratedRegex(@"\bTypeScript\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex TypeScriptMajorReleasePattern();
+
+    [GeneratedRegex(@"\bPowerShell\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex PowerShellMajorReleasePattern();
+
+    [GeneratedRegex(@"\bAzure Sphere OS(?:\s+version)?\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureSphereMajorReleasePattern();
+
+    [GeneratedRegex(@"\bMicrosoft Agent Framework\s+(?:releas\w+\s+)?(?:version\s+)?v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AgentFrameworkMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:MCP C# SDK\s+v?[1-9]\d*(?:\.\d+)+|v?[1-9]\d*(?:\.\d+)+\s+of\s+(?:the\s+official\s+)?MCP C# SDK)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex McpCSharpSdkMajorReleasePattern();
+
+    [GeneratedRegex(@"\bSkiaSharp\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex SkiaSharpMajorReleasePattern();
+
+    private static bool IsSupportedMajorReleaseProduct(string title) =>
+        DotNetMajorReleasePattern().IsMatch(title) ||
+        AspireMajorReleasePattern().IsMatch(title) ||
+        TypeScriptMajorReleasePattern().IsMatch(title) ||
+        PowerShellMajorReleasePattern().IsMatch(title) ||
+        AzureSphereMajorReleasePattern().IsMatch(title) ||
+        AgentFrameworkMajorReleasePattern().IsMatch(title) ||
+        McpCSharpSdkMajorReleasePattern().IsMatch(title) ||
+        SkiaSharpMajorReleasePattern().IsMatch(title);
 
     internal static List<ReleaseEntry> DetectMajorReleases(List<ReleaseEntry> blogEntries)
     {
         return blogEntries
             .Where(e => !string.IsNullOrWhiteSpace(e.Version)
-                && MajorVersionPattern().IsMatch(e.Version)
-                && ReleaseKeywordPattern().IsMatch(e.Version))
+                && IsSupportedMajorReleaseProduct(e.Version)
+                && ReleaseKeywordPattern().IsMatch(e.Version)
+                && !VersionSupportAnnouncementPattern().IsMatch(e.Version))
             .ToList();
     }
 
