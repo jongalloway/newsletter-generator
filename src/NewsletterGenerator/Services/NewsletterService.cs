@@ -1458,7 +1458,7 @@ public partial class NewsletterService(
         {
             foreach (var entry in source.Entries)
             {
-                if (excludeTitles.Contains(entry.Version) || !seenUrls.Add(entry.Url))
+                if (!seenUrls.Add(entry.Url) || excludeTitles.Contains(entry.Version))
                     continue;
 
                 contentItems.Add(new ContentItem(
@@ -1604,18 +1604,23 @@ public partial class NewsletterService(
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return ContentCategory.OtherDeveloperUpdates;
 
+        var isDevBlogsHost = uri.Host.Equals("devblogs.microsoft.com", StringComparison.OrdinalIgnoreCase);
+
         if (uri.Host.Equals("azure.microsoft.com", StringComparison.OrdinalIgnoreCase) ||
-            uri.AbsolutePath.StartsWith("/all-things-azure/", StringComparison.OrdinalIgnoreCase) ||
-            uri.AbsolutePath.StartsWith("/agent-framework/", StringComparison.OrdinalIgnoreCase) ||
-            uri.AbsolutePath.StartsWith("/aspire/", StringComparison.OrdinalIgnoreCase))
+            isDevBlogsHost &&
+            (uri.AbsolutePath.StartsWith("/all-things-azure/", StringComparison.OrdinalIgnoreCase) ||
+             uri.AbsolutePath.StartsWith("/agent-framework/", StringComparison.OrdinalIgnoreCase) ||
+             uri.AbsolutePath.StartsWith("/aspire/", StringComparison.OrdinalIgnoreCase)))
             return ContentCategory.AgentDevelopmentAndAzure;
 
-        if (uri.AbsolutePath.StartsWith("/dotnet/", StringComparison.OrdinalIgnoreCase))
+        if (isDevBlogsHost &&
+            uri.AbsolutePath.StartsWith("/dotnet/", StringComparison.OrdinalIgnoreCase))
             return ContentCategory.DotNet;
 
         if (uri.Host.Equals("github.blog", StringComparison.OrdinalIgnoreCase) ||
-            uri.AbsolutePath.StartsWith("/typescript/", StringComparison.OrdinalIgnoreCase) ||
-            uri.AbsolutePath.StartsWith("/visualstudio/", StringComparison.OrdinalIgnoreCase))
+            isDevBlogsHost &&
+            (uri.AbsolutePath.StartsWith("/typescript/", StringComparison.OrdinalIgnoreCase) ||
+             uri.AbsolutePath.StartsWith("/visualstudio/", StringComparison.OrdinalIgnoreCase)))
             return ContentCategory.GitHubAndDevTools;
 
         return ContentCategory.OtherDeveloperUpdates;

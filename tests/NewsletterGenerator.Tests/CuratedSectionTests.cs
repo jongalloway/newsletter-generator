@@ -51,6 +51,11 @@ public class CuratedSectionTests
     [InlineData("https://github.blog/changelog/example", (int)ContentCategory.GitHubAndDevTools)]
     [InlineData("https://devblogs.microsoft.com/typescript/example", (int)ContentCategory.GitHubAndDevTools)]
     [InlineData("https://developer.microsoft.com/en-us/example", (int)ContentCategory.OtherDeveloperUpdates)]
+    [InlineData("https://example.com/aspire/example", (int)ContentCategory.OtherDeveloperUpdates)]
+    [InlineData("https://example.com/agent-framework/example", (int)ContentCategory.OtherDeveloperUpdates)]
+    [InlineData("https://example.com/dotnet/example", (int)ContentCategory.OtherDeveloperUpdates)]
+    [InlineData("https://example.com/typescript/example", (int)ContentCategory.OtherDeveloperUpdates)]
+    [InlineData("https://example.com/visualstudio/example", (int)ContentCategory.OtherDeveloperUpdates)]
     [InlineData("not-a-url", (int)ContentCategory.OtherDeveloperUpdates)]
     public void ResolveContentCategory_UsesUrlWhenFeedIsAggregate(
         string url,
@@ -98,6 +103,24 @@ public class CuratedSectionTests
             items,
             item => Assert.Equal(ContentCategory.AgentDevelopmentAndAzure, item.Category),
             item => Assert.Equal(ContentCategory.OtherDeveloperUpdates, item.Category));
+    }
+
+    [Fact]
+    public void CreateContentItems_RecordsExcludedUrlsBeforeDeduplicatingLaterFeeds()
+    {
+        var aggregateCopy = FirstEntry with { Version = "Aggregate feed title" };
+        List<ContentSourceGroup> sources =
+        [
+            new(".NET Blog", ContentCategory.DotNet, [FirstEntry]),
+            new("Microsoft Developer Blog", ContentCategory.None, [aggregateCopy, SecondEntry])
+        ];
+
+        var items = NewsletterService.CreateContentItems(
+            sources,
+            new HashSet<string>([FirstEntry.Version]));
+
+        var item = Assert.Single(items);
+        Assert.Equal(SecondEntry.Url, item.Url);
     }
 
     [Fact]
