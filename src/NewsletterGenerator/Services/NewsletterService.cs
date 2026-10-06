@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using NewsletterGenerator;
 using GitHub.Copilot;
@@ -51,10 +52,17 @@ public partial class NewsletterService(
     {
         OnErrorOccurred = (input, invocation) =>
         {
-            logger.LogWarning("Session error in {Context}: {Error}", input.ErrorContext, input.Error);
+            var shouldRetry = ShouldRetrySessionError(input.Recoverable, input.Error);
+            logger.LogWarning(
+                "Session error in {Context} (recoverable={Recoverable}, handling={Handling}): {Error}",
+                input.ErrorContext,
+                input.Recoverable,
+                shouldRetry ? "retry" : "abort",
+                input.Error);
             return Task.FromResult<ErrorOccurredHookOutput?>(new ErrorOccurredHookOutput
             {
-                ErrorHandling = "retry"
+                ErrorHandling = shouldRetry ? "retry" : "abort",
+                RetryCount = shouldRetry ? 2 : 0
             });
         },
         OnSessionStart = (input, invocation) =>
@@ -68,6 +76,18 @@ public partial class NewsletterService(
             return Task.FromResult<SessionEndHookOutput?>(null);
         }
     };
+
+    internal static bool ShouldRetrySessionError(bool recoverable, string? error)
+    {
+        if (!recoverable || string.IsNullOrWhiteSpace(error))
+            return false;
+
+        return !error.Contains("InvalidArg", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("OAuth token", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("HMAC key", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("unauthorized", StringComparison.OrdinalIgnoreCase)
+            && !error.Contains("authentication", StringComparison.OrdinalIgnoreCase);
+    }
 
     internal static string ResolveReasoningEffort(string operationProfile) => operationProfile switch
     {
@@ -1075,18 +1095,93 @@ public partial class NewsletterService(
 
     // ── DevTech MVP multi-prompt section generation ────────────────────────
 
-    [GeneratedRegex(@"\d+\.\d+")]
-    private static partial Regex MajorVersionPattern();
-
-    [GeneratedRegex(@"\b(announc|releas|ship|launch|generally.available|now.available|introducing)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:announc\w*|releas\w*|ship\w*|launch\w*|generally\s+available|now\s+available|introducing|preview\s*\d*|RC\s*\d*|GA|stable|is\s+here|what(?:'|’)s\s+new)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ReleaseKeywordPattern();
+
+    [GeneratedRegex(@"\bsupport\s+for\b.*(?:\d+\.\d+|\.NET\s+\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex VersionSupportAnnouncementPattern();
+
+    [GeneratedRegex(@"\.NET(?:\s+Core)?\s+[1-9]\d*(?:\.\d+)*", RegexOptions.IgnoreCase)]
+    private static partial Regex DotNetMajorReleasePattern();
+
+    [GeneratedRegex(@"\bAspire\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AspireMajorReleasePattern();
+
+    [GeneratedRegex(@"\bTypeScript\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex TypeScriptMajorReleasePattern();
+
+    [GeneratedRegex(@"\bPowerShell\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex PowerShellMajorReleasePattern();
+
+    [GeneratedRegex(@"\bAzure Sphere OS(?:\s+version)?\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureSphereMajorReleasePattern();
+
+    [GeneratedRegex(@"\bMicrosoft Agent Framework\s+(?:releas\w+\s+)?(?:version\s+)?v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AgentFrameworkMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:MCP C# SDK\s+v?[1-9]\d*(?:\.\d+)+|v?[1-9]\d*(?:\.\d+)+\s+of\s+(?:the\s+official\s+)?MCP C# SDK)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex McpCSharpSdkMajorReleasePattern();
+
+    [GeneratedRegex(@"\bSkiaSharp\s+[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex SkiaSharpMajorReleasePattern();
+
+    [GeneratedRegex(@"\bMicrosoft\.Extensions\.(?:AI|VectorData)\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex MicrosoftExtensionsAiMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:Windows App SDK|Windows App Runtime|WinUI|WinApp CLI)\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex WindowsAppMajorReleasePattern();
+
+    [GeneratedRegex(@"\bSemantic Kernel\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex SemanticKernelMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:Microsoft\s+)?Orleans\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex OrleansMajorReleasePattern();
+
+    [GeneratedRegex(@"\bNuGet\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex NuGetMajorReleasePattern();
+
+    [GeneratedRegex(@"\b(?:Azure Developer CLI|azd)\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureDeveloperCliMajorReleasePattern();
+
+    [GeneratedRegex(@"\bAzure Functions(?:\s+(?:runtime|host))?\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureFunctionsMajorReleasePattern();
+
+    [GeneratedRegex(@"\bBicep\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex BicepMajorReleasePattern();
+
+    [GeneratedRegex(@"\bMicrosoft Foundry(?:\s+(?:SDK|tooling|extension|Agent Service))?\s+v?[1-9]\d*(?:\.\d+)+", RegexOptions.IgnoreCase)]
+    private static partial Regex MicrosoftFoundryMajorReleasePattern();
+
+    [GeneratedRegex(@"\.NET MAUI\s+[1-9]\d*(?:\.\d+)*", RegexOptions.IgnoreCase)]
+    private static partial Regex DotNetMauiMajorReleasePattern();
+
+    private static bool IsSupportedMajorReleaseProduct(string title) =>
+        DotNetMajorReleasePattern().IsMatch(title) ||
+        DotNetMauiMajorReleasePattern().IsMatch(title) ||
+        AspireMajorReleasePattern().IsMatch(title) ||
+        TypeScriptMajorReleasePattern().IsMatch(title) ||
+        PowerShellMajorReleasePattern().IsMatch(title) ||
+        AzureSphereMajorReleasePattern().IsMatch(title) ||
+        AgentFrameworkMajorReleasePattern().IsMatch(title) ||
+        McpCSharpSdkMajorReleasePattern().IsMatch(title) ||
+        SkiaSharpMajorReleasePattern().IsMatch(title) ||
+        MicrosoftExtensionsAiMajorReleasePattern().IsMatch(title) ||
+        WindowsAppMajorReleasePattern().IsMatch(title) ||
+        SemanticKernelMajorReleasePattern().IsMatch(title) ||
+        OrleansMajorReleasePattern().IsMatch(title) ||
+        NuGetMajorReleasePattern().IsMatch(title) ||
+        AzureDeveloperCliMajorReleasePattern().IsMatch(title) ||
+        AzureFunctionsMajorReleasePattern().IsMatch(title) ||
+        BicepMajorReleasePattern().IsMatch(title) ||
+        MicrosoftFoundryMajorReleasePattern().IsMatch(title);
 
     internal static List<ReleaseEntry> DetectMajorReleases(List<ReleaseEntry> blogEntries)
     {
         return blogEntries
             .Where(e => !string.IsNullOrWhiteSpace(e.Version)
-                && MajorVersionPattern().IsMatch(e.Version)
-                && ReleaseKeywordPattern().IsMatch(e.Version))
+                && IsSupportedMajorReleaseProduct(e.Version)
+                && ReleaseKeywordPattern().IsMatch(e.Version)
+                && !VersionSupportAnnouncementPattern().IsMatch(e.Version))
             .ToList();
     }
 
@@ -1100,6 +1195,13 @@ public partial class NewsletterService(
         OUTPUT: Only the requested Markdown section. No preamble, no commentary, no code fences.
         Start directly with the ## heading. Section separators are added when the
         newsletter is assembled; do not add horizontal rules.
+        """;
+
+    private const string DevTechCurationSystem = """
+        You curate technical newsletter content for Developer Technologies (DevTech) MVPs.
+        Select only from the supplied content items and reference each selection by its ContentItemId.
+        Write direct, factual summaries with no marketing language or hyperbole.
+        Return content data only. Do not write Markdown, headings, bullets, links, or separators.
         """;
 
     private async Task<string> GenerateCachedSectionAsync(
@@ -1116,15 +1218,444 @@ public partial class NewsletterService(
         if (cached != null)
         {
             AnsiConsole.MarkupLine($"[dim]Using cached {Markup.Escape(displayLabel)}[/]");
+            return NormalizeMarkdownListSpacing(cached);
+        }
+
+        AnsiConsole.MarkupLine($"[grey]Generating {Markup.Escape(displayLabel)}...[/]");
+        var result = await ExecuteWithFreshSessionRetryAsync(
+            model,
+            SectionSynthesisOperation,
+            systemMessage,
+            cacheKey,
+            session => SendPromptAsync(session, prompt, displayLabel));
+        result = NormalizeMarkdownListSpacing(result);
+        await cache.SaveCacheAsync(cacheKey, result, sourceHash);
+        return result;
+    }
+
+    internal static string NormalizeMarkdownListSpacing(string markdown)
+    {
+        var newline = markdown.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var output = new List<string>(lines.Length);
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index];
+            var isListItem = MarkdownListItemRegex().IsMatch(line);
+            var previousIsListItem = index > 0 && MarkdownListItemRegex().IsMatch(lines[index - 1]);
+            var nextIsListItem = index + 1 < lines.Length && MarkdownListItemRegex().IsMatch(lines[index + 1]);
+            var previousIsIndented = index > 0 && IsIndentedMarkdownLine(lines[index - 1]);
+            var nextIsIndented = index + 1 < lines.Length && IsIndentedMarkdownLine(lines[index + 1]);
+
+            if (isListItem &&
+                index > 0 &&
+                !string.IsNullOrWhiteSpace(lines[index - 1]) &&
+                !previousIsListItem &&
+                !previousIsIndented)
+            {
+                output.Add(string.Empty);
+            }
+
+            output.Add(line);
+
+            if (isListItem &&
+                index + 1 < lines.Length &&
+                !string.IsNullOrWhiteSpace(lines[index + 1]) &&
+                !nextIsListItem &&
+                !nextIsIndented)
+            {
+                output.Add(string.Empty);
+            }
+        }
+
+        return string.Join(newline, output);
+    }
+
+    private static bool IsIndentedMarkdownLine(string line) =>
+        line.Length > 0 && char.IsWhiteSpace(line[0]);
+
+    [GeneratedRegex(@"^\s*(?:[-+*]|\d+\.)\s+")]
+    private static partial Regex MarkdownListItemRegex();
+
+    private async Task<string> GenerateCachedCuratedSectionAsync(
+        string cacheKey,
+        string sourceDataJson,
+        string prompt,
+        CacheService cache,
+        string? model,
+        string displayLabel,
+        string heading,
+        IReadOnlyList<ContentItem> contentItems,
+        int minimumItems,
+        int maximumItems,
+        string itemPrefix,
+        bool useHardLineBreaks)
+    {
+        var sourceHash = CacheService.GetContentHash(sourceDataJson);
+        var cached = await cache.TryGetCachedAsync(cacheKey, sourceHash);
+        if (cached != null)
+        {
+            AnsiConsole.MarkupLine($"[dim]Using cached {Markup.Escape(displayLabel)}[/]");
             return cached;
         }
 
         AnsiConsole.MarkupLine($"[grey]Generating {Markup.Escape(displayLabel)}...[/]");
-        await using var copilot = await CreateStartedSessionAsync(model, SectionSynthesisOperation, systemMessage, cacheKey);
-        var result = await SendPromptAsync(copilot.Session, prompt, displayLabel);
-        await cache.SaveCacheAsync(cacheKey, result, sourceHash);
-        return result;
+        var rendered = await ExecuteWithFreshSessionRetryAsync(
+            model,
+            SectionSynthesisOperation,
+            DevTechCurationSystem,
+            cacheKey,
+            async session =>
+            {
+                async Task<string> RequestCorrectionAsync(Exception exception)
+                {
+                    logger.LogWarning(
+                        exception,
+                        "{DisplayLabel} returned an unusable structured response; requesting one correction",
+                        displayLabel);
+                    var correctionPrompt = $"""
+                        Correct the previous response.
+
+                        Validation error: {exception.Message}
+
+                        Return a non-empty section summary and {minimumItems}-{maximumItems} unique items.
+                        Use only ContentItemId values from the original prompt, and include a non-empty factual summary for each item.
+                        """;
+                    var correctedResult = await SendTypedPromptAsync<CuratedSection>(
+                        session,
+                        correctionPrompt,
+                        $"{displayLabel} correction");
+                    return RenderCuratedSection(
+                        heading,
+                        correctedResult,
+                        contentItems,
+                        minimumItems,
+                        maximumItems,
+                        itemPrefix,
+                        useHardLineBreaks);
+                }
+
+                CuratedSection result;
+                try
+                {
+                    result = await SendTypedPromptAsync<CuratedSection>(session, prompt, displayLabel);
+                }
+                catch (Exception ex) when (IsTypedResponseParsingFailure(ex))
+                {
+                    return await RequestCorrectionAsync(ex);
+                }
+
+                try
+                {
+                    return RenderCuratedSection(
+                        heading,
+                        result,
+                        contentItems,
+                        minimumItems,
+                        maximumItems,
+                        itemPrefix,
+                        useHardLineBreaks);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return await RequestCorrectionAsync(ex);
+                }
+            });
+        await cache.SaveCacheAsync(cacheKey, rendered, sourceHash);
+        return rendered;
     }
+
+    internal static bool IsTypedResponseParsingFailure(Exception exception) =>
+        exception is JsonException;
+
+    private async Task<TResult> ExecuteWithFreshSessionRetryAsync<TResult>(
+        string? model,
+        string operationProfile,
+        string systemMessage,
+        string workflowStep,
+        Func<CopilotSession, Task<TResult>> operation)
+    {
+        StartedSession? startedSession = await CreateStartedSessionAsync(
+            model,
+            operationProfile,
+            systemMessage,
+            workflowStep);
+
+        try
+        {
+            try
+            {
+                return await operation(startedSession.Session);
+            }
+            catch (Exception ex) when (IsCredentialSessionError(ex))
+            {
+                logger.LogWarning(
+                    ex,
+                    "Session credentials were unavailable for {WorkflowStep}; retrying once with a fresh session",
+                    workflowStep);
+                await startedSession.DisposeAsync();
+                startedSession = null;
+                startedSession = await CreateStartedSessionAsync(
+                    model,
+                    operationProfile,
+                    systemMessage);
+                return await operation(startedSession.Session);
+            }
+        }
+        finally
+        {
+            if (startedSession is not null)
+                await startedSession.DisposeAsync();
+        }
+    }
+
+    internal static bool IsCredentialSessionError(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.Message.Contains("No GitHub OAuth token", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("Copilot HMAC key", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static List<ContentItem> CreateContentItems(
+        IReadOnlyList<(string SourceName, List<ReleaseEntry> Entries)> groups,
+        ContentItemType type)
+    {
+        List<ContentItem> contentItems = [];
+
+        foreach (var (sourceName, entries) in groups)
+        {
+            foreach (var entry in entries)
+            {
+                contentItems.Add(new ContentItem(
+                    $"item-{contentItems.Count + 1:D3}",
+                    type,
+                    ContentCategory.None,
+                    sourceName,
+                    entry.Version,
+                    entry.PublishedAt,
+                    entry.PlainText,
+                    entry.Url));
+            }
+        }
+
+        return contentItems;
+    }
+
+    internal static List<ContentItem> CreateContentItems(
+        IReadOnlyList<ContentSourceGroup> sources,
+        IReadOnlySet<string> excludeTitles)
+    {
+        List<ContentItem> contentItems = [];
+        var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var source in sources)
+        {
+            foreach (var entry in source.Entries)
+            {
+                if (!seenUrls.Add(entry.Url) || excludeTitles.Contains(entry.Version))
+                    continue;
+
+                contentItems.Add(new ContentItem(
+                    $"item-{contentItems.Count + 1:D3}",
+                    ContentItemType.BlogPost,
+                    source.Category == ContentCategory.None
+                        ? ResolveContentCategory(entry.Url)
+                        : source.Category,
+                    source.Name,
+                    entry.Version,
+                    entry.PublishedAt,
+                    entry.PlainText,
+                    entry.Url));
+            }
+        }
+
+        return contentItems;
+    }
+
+    internal static string BuildCuratedContentPrompt(
+        string instructions,
+        IReadOnlyList<ContentItem> contentItems)
+    {
+        var prompt = new StringBuilder(instructions.Trim());
+        prompt.AppendLine();
+        prompt.AppendLine();
+        prompt.AppendLine("Available content items:");
+
+        foreach (var group in contentItems.GroupBy(item => (item.Category, item.Type, item.SourceName)))
+        {
+            prompt.AppendLine();
+            var category = group.Key.Category == ContentCategory.None
+                ? null
+                : GetContentCategoryHeading(group.Key.Category);
+            prompt.AppendLine(category is null
+                ? $"{group.Key.Type} | {group.Key.SourceName}"
+                : $"{category} | {group.Key.SourceName}");
+            foreach (var item in group)
+            {
+                prompt.AppendLine($"[{item.Id}] {item.PublishedAt:yyyy-MM-dd} | {item.Title}");
+                if (!string.IsNullOrWhiteSpace(item.Content))
+                    prompt.AppendLine(item.Content);
+                prompt.AppendLine();
+            }
+        }
+
+        return prompt.ToString();
+    }
+
+    internal static string RenderCuratedSection(
+        string heading,
+        CuratedSection section,
+        IReadOnlyList<ContentItem> contentItems,
+        int minimumItems,
+        int maximumItems,
+        string itemPrefix,
+        bool useHardLineBreaks = false)
+    {
+        if (string.IsNullOrWhiteSpace(section.Summary))
+            throw new InvalidOperationException($"{heading} curation returned an empty summary.");
+        if (section.Items is null)
+            throw new InvalidOperationException($"{heading} curation returned no items.");
+        if (section.Items.Length < minimumItems)
+        {
+            throw new InvalidOperationException(
+                $"{heading} curation returned {section.Items.Length} items; expected at least {minimumItems}.");
+        }
+
+        var contentItemsById = contentItems.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var selectedIds = new HashSet<string>(StringComparer.Ordinal);
+        var output = new StringBuilder()
+            .AppendLine($"## {heading}")
+            .AppendLine()
+            .AppendLine(section.Summary.Trim())
+            .AppendLine();
+
+        var resolvedItems = new List<(CuratedContentItem Curated, ContentItem Content)>();
+        foreach (var item in section.Items.Take(maximumItems))
+        {
+            if (!selectedIds.Add(item.ContentItemId))
+                throw new InvalidOperationException($"{heading} curation selected {item.ContentItemId} more than once.");
+            if (!contentItemsById.TryGetValue(item.ContentItemId, out var contentItem))
+                throw new InvalidOperationException($"{heading} curation selected unknown content item {item.ContentItemId}.");
+            if (string.IsNullOrWhiteSpace(item.Summary))
+                throw new InvalidOperationException($"{heading} curation returned an item without a summary.");
+
+            resolvedItems.Add((item, contentItem));
+        }
+
+        var hasCategories = resolvedItems.Any(item => item.Content.Category != ContentCategory.None);
+        var isFirstCategory = true;
+        foreach (var categoryGroup in resolvedItems
+                     .GroupBy(item => item.Content.Category)
+                     .OrderBy(group => GetContentCategorySortOrder(group.Key)))
+        {
+            if (hasCategories)
+            {
+                if (categoryGroup.Key == ContentCategory.None)
+                    throw new InvalidOperationException($"{heading} curation selected an item without a category.");
+                if (!isFirstCategory)
+                    output.AppendLine();
+                output.AppendLine($"### {GetContentCategoryHeading(categoryGroup.Key)}");
+                output.AppendLine();
+                isFirstCategory = false;
+            }
+
+            foreach (var (curated, content) in categoryGroup)
+            {
+                var displayTitle = string.IsNullOrWhiteSpace(curated.DisplayTitle)
+                    ? content.Title
+                    : curated.DisplayTitle;
+                var label = EscapeMarkdownLinkLabel(NormalizeDisplayTitle(displayTitle));
+                var description = EnsureTerminalPunctuation(curated.Summary.Trim());
+                var hardLineBreak = useHardLineBreaks ? "  " : string.Empty;
+                output.AppendLine($"{itemPrefix} **[{label}]({content.Url})** - {description}{hardLineBreak}");
+            }
+        }
+
+        return output.ToString().TrimEnd();
+    }
+
+    private static int GetContentCategorySortOrder(ContentCategory category) => category switch
+    {
+        ContentCategory.DotNet => 0,
+        ContentCategory.AgentDevelopmentAndAzure => 1,
+        ContentCategory.GitHubAndDevTools => 2,
+        ContentCategory.OtherDeveloperUpdates => 3,
+        ContentCategory.None => 4,
+        _ => throw new ArgumentOutOfRangeException(nameof(category), category, null)
+    };
+
+    internal static string GetContentCategoryHeading(ContentCategory category) => category switch
+    {
+        ContentCategory.DotNet => ".NET",
+        ContentCategory.AgentDevelopmentAndAzure => "Agent Development and Azure",
+        ContentCategory.GitHubAndDevTools => "GitHub and DevTools",
+        ContentCategory.OtherDeveloperUpdates => "Other Developer Updates",
+        _ => throw new ArgumentOutOfRangeException(nameof(category), category, "The category has no section heading.")
+    };
+
+    internal static ContentCategory ResolveContentCategory(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return ContentCategory.OtherDeveloperUpdates;
+
+        var isDevBlogsHost = uri.Host.Equals("devblogs.microsoft.com", StringComparison.OrdinalIgnoreCase);
+
+        if (uri.Host.Equals("azure.microsoft.com", StringComparison.OrdinalIgnoreCase) ||
+            isDevBlogsHost &&
+            (uri.AbsolutePath.StartsWith("/all-things-azure/", StringComparison.OrdinalIgnoreCase) ||
+             uri.AbsolutePath.StartsWith("/agent-framework/", StringComparison.OrdinalIgnoreCase) ||
+             uri.AbsolutePath.StartsWith("/aspire/", StringComparison.OrdinalIgnoreCase)))
+            return ContentCategory.AgentDevelopmentAndAzure;
+
+        if (isDevBlogsHost &&
+            uri.AbsolutePath.StartsWith("/dotnet/", StringComparison.OrdinalIgnoreCase))
+            return ContentCategory.DotNet;
+
+        if (uri.Host.Equals("github.blog", StringComparison.OrdinalIgnoreCase) ||
+            isDevBlogsHost &&
+            (uri.AbsolutePath.StartsWith("/typescript/", StringComparison.OrdinalIgnoreCase) ||
+             uri.AbsolutePath.StartsWith("/visualstudio/", StringComparison.OrdinalIgnoreCase)))
+            return ContentCategory.GitHubAndDevTools;
+
+        return ContentCategory.OtherDeveloperUpdates;
+    }
+
+    internal static string NormalizeDisplayTitle(string title)
+    {
+        var normalized = LaunchStatusPrefixRegex().Replace(title.Trim(), string.Empty);
+        normalized = LeadingDecorativeSymbolsRegex().Replace(normalized, string.Empty);
+        normalized = TrailingHashtagsRegex().Replace(normalized, string.Empty);
+        normalized = YearWordSeparatorRegex().Replace(normalized, "$1 - $2");
+        return normalized.Trim();
+    }
+
+    [GeneratedRegex(@"^\[(?:Launched|Updated)\]\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex LaunchStatusPrefixRegex();
+
+    [GeneratedRegex(@"^(?:[\uD800-\uDBFF][\uDC00-\uDFFF]\uFE0F?)+\s*")]
+    private static partial Regex LeadingDecorativeSymbolsRegex();
+
+    [GeneratedRegex(@"\s+(?:#\w+\s*)+$")]
+    private static partial Regex TrailingHashtagsRegex();
+
+    [GeneratedRegex(@"(\b\d{4})-([A-Za-z])")]
+    private static partial Regex YearWordSeparatorRegex();
+
+    private static string EscapeMarkdownLinkLabel(string value) =>
+        value.Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("[", @"\[", StringComparison.Ordinal)
+            .Replace("]", @"\]", StringComparison.Ordinal);
+
+    private static string EnsureTerminalPunctuation(string value) =>
+        value.EndsWith('.') || value.EndsWith('!') || value.EndsWith('?')
+            ? value
+            : $"{value}.";
 
     public async Task<string> GenerateDevTechCopilotSectionAsync(
         List<ReleaseEntry> cliReleases,
@@ -1333,51 +1864,50 @@ public partial class NewsletterService(
             DevTechSectionSystem, prompt, cache, model, $"major release: {entry.Version}");
     }
 
-    public async Task<string> GenerateDevTechBlogsSectionAsync(
-        List<ReleaseEntry> blogEntries,
+    internal async Task<string> GenerateDevTechBlogsSectionAsync(
+        IReadOnlyList<ContentSourceGroup> contentSources,
         IReadOnlyList<string> excludeTitles,
         DateOnly weekStart,
         DateOnly weekEnd,
         CacheService cache,
         string? model = null)
     {
-        var filtered = blogEntries
-            .Where(e => !excludeTitles.Contains(e.Version, StringComparer.OrdinalIgnoreCase))
-            .ToList();
-
-        if (filtered.Count == 0)
+        var excludedTitleSet = excludeTitles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var contentItems = CreateContentItems(contentSources, excludedTitleSet);
+        if (contentItems.Count == 0)
             return string.Empty;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"""
-            Generate the "Developer Blogs" section for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
+        var minimumItems = Math.Min(3, contentItems.Count);
+        var maximumItems = Math.Min(10, contentItems.Count);
+        var prompt = BuildCuratedContentPrompt(
+            $"""
+            Curate the most interesting {minimumItems}-{maximumItems} updates
+            for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
 
-            Curate the most interesting 6-10 updates across .NET, Azure, Aspire, TypeScript, GitHub Blog, and the Microsoft Developer Changelog.
-            Group by topic area. The changelog includes updates from several of the other sources, so do not repeat the same URL.
-            Be selective - only include updates that would interest an MVP audience, but lean toward including a high-quality update rather than cutting it.
-            Give extra weight to posts with broad audience appeal - for example, a post that spans multiple topics or
-            products (such as .NET plus the GitHub Copilot app) is more valuable than a narrow single-topic post and
-            should be favored when deciding what makes the cut.
-            Each bullet: - **[Title](url)** - one SHORT sentence summary (under 20 words).
-            Brevity is critical. State what changed or shipped, not background context.
+            Prioritize broadly useful updates across .NET, Azure, Aspire, TypeScript, GitHub, and Microsoft developer tools.
+            Avoid duplicate topics. Favor posts spanning multiple products over narrow updates.
+            Write one summary sentence for the section.
+            For each selected item, write a concise display title. Remove feed status prefixes and promotional wording,
+            but preserve product names, version numbers, release status, and the original meaning.
+            For each selected item, write one factual summary of 20-30 words when the source supports it.
+            State what changed and why it matters to developers. Do not merely restate or paraphrase the title.
+            """,
+            contentItems);
 
-            Output exactly this format:
-
-            ---
-            ## Developer Blogs
-
-            [summary sentence]
-
-            - **[Title](url)** - description.
-
-            Source material:
-
-            """);
-        AppendBlogEntries(sb, "Developer Blogs", filtered);
-
-        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { filtered, model });
-        return await GenerateCachedSectionAsync("devtech-blogs", sourceData,
-            DevTechSectionSystem, sb.ToString(), cache, model, "Developer Blogs section");
+        var sourceData = System.Text.Json.JsonSerializer.Serialize(new { contentItems, model });
+        return await GenerateCachedCuratedSectionAsync(
+            "devtech-blogs-v6",
+            sourceData,
+            prompt,
+            cache,
+            model,
+            "Developer Blogs section",
+            "Developer Blogs",
+            contentItems,
+            minimumItems,
+            maximumItems,
+            "-",
+            useHardLineBreaks: false);
     }
 
     public async Task<string> GenerateDevTechVideosSectionAsync(
@@ -1396,31 +1926,31 @@ public partial class NewsletterService(
         if (totalCount == 0)
             return string.Empty;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"""
-            Generate the "Developer Videos" section for a DevTech MVP newsletter covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
+        var contentItems = CreateContentItems(
+            [
+                ("YouTube .NET", youtubeDotNetEntries),
+                ("YouTube Visual Studio", youtubeVSEntries),
+                ("YouTube VS Code", youtubeVSCodeEntries),
+                ("YouTube GitHub", youtubeGitHubEntries),
+                ("YouTube Microsoft Developer", youtubeMicrosoftDevEntries)
+            ],
+            ContentItemType.Video);
+        var minimumItems = Math.Min(6, contentItems.Count);
+        var maximumItems = Math.Min(10, contentItems.Count);
+        var prompt = BuildCuratedContentPrompt(
+            $"""
+            Select {minimumItems}-{maximumItems} of the most interesting recent videos for a DevTech MVP newsletter
+            covering {weekStart:MMMM d} to {weekEnd:MMMM d, yyyy}.
 
-            Highlight 10 of the most interesting recent videos across the channels below.
-            Focus on videos relevant to MVPs: developer tools, new features, AI + dev workflows, community content.
-            Each video entry MUST use a 📺 emoji prefix (not a dash bullet).
-
-            Output exactly this format:
-
-            ---
-            ## Developer Videos
-
-            [summary sentence]
-
-            📺 **[Video title](url)** - description.
-
-            Source material:
-
-            """);
-        AppendBlogEntries(sb, "YouTube .NET Channel Videos", youtubeDotNetEntries);
-        AppendBlogEntries(sb, "YouTube Visual Studio Videos", youtubeVSEntries);
-        AppendBlogEntries(sb, "YouTube VS Code Videos", youtubeVSCodeEntries);
-        AppendBlogEntries(sb, "YouTube GitHub Videos", youtubeGitHubEntries);
-        AppendBlogEntries(sb, "YouTube Microsoft Developer Videos", youtubeMicrosoftDevEntries);
+            Prioritize developer tools, new capabilities, AI-assisted development workflows, and community content.
+            Include a useful mix of channels and avoid duplicate topics.
+            Write one summary sentence for the section.
+            For each selected item, write a concise display title. Remove hashtags, channel branding, decorative emoji,
+            and promotional wording, but preserve product names, version numbers, and the original meaning.
+            For each selected item, write one factual summary of 20-30 words when the source supports it.
+            Give the reader a concrete takeaway from the video. Do not merely restate or paraphrase the title.
+            """,
+            contentItems);
 
         var sourceData = System.Text.Json.JsonSerializer.Serialize(new
         {
@@ -1431,8 +1961,19 @@ public partial class NewsletterService(
             youtubeMicrosoftDevEntries,
             model
         });
-        return await GenerateCachedSectionAsync("devtech-videos", sourceData,
-            DevTechSectionSystem, sb.ToString(), cache, model, "Developer Videos section");
+        return await GenerateCachedCuratedSectionAsync(
+            "devtech-videos-v6",
+            sourceData,
+            prompt,
+            cache,
+            model,
+            "Developer Videos section",
+            "Developer Videos",
+            contentItems,
+            minimumItems,
+            maximumItems,
+            "📺",
+            useHardLineBreaks: true);
     }
 
     public async Task<string> GenerateDevTechWelcomeAsync(
@@ -1560,6 +2101,60 @@ public partial class NewsletterService(
         if (string.IsNullOrWhiteSpace(result))
             logger.LogWarning("SendPromptAsync: AI returned empty response for prompt starting with: {PromptStart}",
                 prompt.Length > 200 ? prompt[..200] : prompt);
+        return result;
+    }
+
+    private async Task<TResult> SendTypedPromptAsync<TResult>(
+        CopilotSession session,
+        string prompt,
+        string operation)
+    {
+        logger.LogDebug(
+            "SendTypedPromptAsync: sending prompt for {Operation} ({Length} chars, response={ResponseType})",
+            operation,
+            prompt.Length,
+            typeof(TResult).Name);
+        string? latestMessageId = null;
+        var eventCount = 0;
+        var streamedChars = 0;
+
+        using var subscription = session.On<SessionEvent>(evt =>
+        {
+            switch (evt)
+            {
+                case AssistantMessageDeltaEvent delta:
+                    streamedChars += delta.Data.DeltaContent?.Length ?? 0;
+                    break;
+                case AssistantMessageEvent message:
+                    eventCount++;
+                    latestMessageId = message.Data.MessageId;
+                    break;
+                case SessionErrorEvent error:
+                    logger.LogError("Copilot session error: {Message}", error.Data.Message);
+                    break;
+            }
+        });
+
+#pragma warning disable GHCP001
+        var result = await session.SendAndWaitAsync<TResult>(
+            prompt,
+            timeout: TimeSpan.FromSeconds(180));
+#pragma warning restore GHCP001
+        if (result is null)
+            throw new JsonException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
+        var responseCharacters = JsonSerializer.Serialize(result).Length;
+        logger.LogInformation(
+            "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
+            typeof(TResult).Name,
+            responseCharacters,
+            eventCount,
+            streamedChars);
+        await TryCaptureUsageMetricsAsync(
+            session,
+            operation,
+            prompt.Length,
+            responseCharacters,
+            latestMessageId);
         return result;
     }
 
