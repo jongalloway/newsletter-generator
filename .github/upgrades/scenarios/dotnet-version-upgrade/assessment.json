@@ -1,0 +1,2091 @@
+{
+  "settings": {
+    "components": {
+      "code": true,
+      "binaries": false
+    },
+    "targetId": "net11.0",
+    "targetDisplayName": ".NETCoreApp,Version=v11.0"
+  },
+  "analysisStartTime": "2026-10-08T22:22:08.0210888Z",
+  "analysisEndTime": "2026-10-08T22:22:16.7779691Z",
+  "privacyModeHelpUrl": "https://go.microsoft.com/fwlink/?linkid=2270980",
+  "stats": {
+    "summary": {
+      "projects": 2,
+      "issues": 5,
+      "incidents": 71,
+      "effort": 71
+    },
+    "charts": {
+      "severity": {
+        "Mandatory": 2,
+        "Optional": 0,
+        "Potential": 69,
+        "Information": 0
+      },
+      "category": {
+        "NuGet": 3,
+        "Project": 2,
+        "Api": 66
+      }
+    }
+  },
+  "projects": [
+    {
+      "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+      "startingProject": true,
+      "issues": 4,
+      "storyPoints": 66,
+      "properties": {
+        "appName": "NewsletterGenerator",
+        "projectKind": "DotNetCoreApp",
+        "frameworks": [
+          "net10.0"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": true,
+        "isTestProject": false,
+        "numberOfFiles": 18,
+        "numberOfCodeFiles": 18,
+        "linesTotal": 6797,
+        "linesOfCode": 6797,
+        "totalApiScanned": 11503,
+        "minLinesOfCodeToChange": 63,
+        "maxLinesOfCodeToChange": 63
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "000b775a-6647-4816-aa05-ec8aabc1a5dc",
+          "ruleId": "NuGet.0002",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.Extensions.Logging, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging, and replace with new package Microsoft.Extensions.Logging 10.0.12",
+              "protected": "Microsoft.Extensions.Logging, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging, and replace with new package Microsoft.Extensions.Logging 10.0.12"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+            "snippet": "Microsoft.Extensions.Logging, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging, and replace with new package Microsoft.Extensions.Logging 10.0.12",
+            "protectedSnippet": "Microsoft.Extensions.Logging, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging, and replace with new package Microsoft.Extensions.Logging 10.0.12",
+            "label": "Microsoft.Extensions.Logging 10.0.10",
+            "properties": {
+              "PackageId": "Microsoft.Extensions.Logging",
+              "PackageVersion": "10.0.10",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "8bccd2de-c4e9-4be7-a8ce-14f9427f89ed",
+          "ruleId": "NuGet.0002",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12",
+              "protected": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+            "snippet": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12",
+            "protectedSnippet": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12",
+            "label": "Microsoft.Extensions.Logging.Abstractions 10.0.10",
+            "properties": {
+              "PackageId": "Microsoft.Extensions.Logging.Abstractions",
+              "PackageVersion": "10.0.10",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "2e4bce08-ba33-4fe0-9962-943bf63f1583",
+          "ruleId": "Project.0002",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: net10.0\nRecommended target framework: net11.0",
+              "protected": "Current target framework: net10.0\nRecommended target framework: net11.0"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+            "snippet": "Current target framework: net10.0\nRecommended target framework: net11.0",
+            "protectedSnippet": "Current target framework: net10.0\nRecommended target framework: net11.0",
+            "properties": {
+              "CurrentTargetFramework": "net10.0",
+              "RecommendedTargetFramework": "net11.0"
+            }
+          }
+        },
+        {
+          "incidentId": "4343553a-0fbb-4871-950c-e4f456516a9b",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var finalUrl = response.RequestMessage?.RequestUri?.ToString();",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\VSCodeReleaseNotesService.cs",
+            "snippet": "var finalUrl = response.RequestMessage?.RequestUri?.ToString();",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "20371"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 426,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "10455198-c6bd-4171-91d4-bab360c6111f",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (uri.Host.Equals(\u0022github.blog\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/typescript/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/visualstudio/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.GitHubAndDevTools;",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (uri.Host.Equals(\u0022github.blog\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/typescript/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/visualstudio/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.GitHubAndDevTools;",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1619,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "28c782da-4f36-43fc-9fa8-3df2b66ef749",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (uri.Host.Equals(\u0022github.blog\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/typescript/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/visualstudio/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.GitHubAndDevTools;",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (uri.Host.Equals(\u0022github.blog\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/typescript/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/visualstudio/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.GitHubAndDevTools;",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1619,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "5a2cf191-a891-48d1-af6c-919227bb30bd",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (isDevBlogsHost \u0026\u0026\r\n            uri.AbsolutePath.StartsWith(\u0022/dotnet/\u0022, StringComparison.OrdinalIgnoreCase))\r\n            return ContentCategory.DotNet;",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (isDevBlogsHost \u0026\u0026\r\n            uri.AbsolutePath.StartsWith(\u0022/dotnet/\u0022, StringComparison.OrdinalIgnoreCase))\r\n            return ContentCategory.DotNet;",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1615,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "cc51bbbd-3d4d-47f8-a5df-0b1b376475b4",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (uri.Host.Equals(\u0022azure.microsoft.com\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/all-things-azure/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/agent-framework/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/aspire/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.AgentDevelopmentAndAzure;",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (uri.Host.Equals(\u0022azure.microsoft.com\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/all-things-azure/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/agent-framework/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/aspire/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.AgentDevelopmentAndAzure;",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1608,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "70522282-3e1a-4dc4-87d7-562cf6622dfb",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (uri.Host.Equals(\u0022azure.microsoft.com\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/all-things-azure/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/agent-framework/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/aspire/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.AgentDevelopmentAndAzure;",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (uri.Host.Equals(\u0022azure.microsoft.com\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/all-things-azure/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/agent-framework/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/aspire/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.AgentDevelopmentAndAzure;",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1608,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "5f838ccf-e418-4ae5-bef4-e0258b8a68d8",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (uri.Host.Equals(\u0022azure.microsoft.com\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/all-things-azure/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/agent-framework/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/aspire/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.AgentDevelopmentAndAzure;",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (uri.Host.Equals(\u0022azure.microsoft.com\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n            isDevBlogsHost \u0026\u0026\r\n            (uri.AbsolutePath.StartsWith(\u0022/all-things-azure/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/agent-framework/\u0022, StringComparison.OrdinalIgnoreCase) ||\r\n             uri.AbsolutePath.StartsWith(\u0022/aspire/\u0022, StringComparison.OrdinalIgnoreCase)))\r\n            return ContentCategory.AgentDevelopmentAndAzure;",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1608,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "a86cccd2-c0cd-4494-9437-328cea6da92b",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))\r\n            return ContentCategory.OtherDeveloperUpdates;",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))\r\n            return ContentCategory.OtherDeveloperUpdates;",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1603,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "d0c66e7f-ade5-4239-a8f3-64b3aa420754",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))\r\n            return ContentCategory.OtherDeveloperUpdates;",
+              "protected": "M:System.Uri.TryCreate(System.String,System.UriKind,System.Uri@)"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\NewsletterService.cs",
+            "snippet": "if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))\r\n            return ContentCategory.OtherDeveloperUpdates;",
+            "protectedSnippet": "M:System.Uri.TryCreate(System.String,System.UriKind,System.Uri@)",
+            "label": "M:System.Uri.TryCreate(System.String,System.UriKind,System.Uri@)",
+            "properties": {
+              "CharCount": "111863"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 1603,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "28a1e118-fbbc-438e-9178-84fa0c49ebfc",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var path = new Uri(feedUrl).AbsolutePath.Trim(\u0027/\u0027).Replace(\u0027/\u0027, \u0027-\u0027);",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\CacheService.cs",
+            "snippet": "var path = new Uri(feedUrl).AbsolutePath.Trim(\u0027/\u0027).Replace(\u0027/\u0027, \u0027-\u0027);",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "9478"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 252,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "2262d0b2-1f9b-4b2c-9b30-d6239bd39400",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var path = new Uri(feedUrl).AbsolutePath.Trim(\u0027/\u0027).Replace(\u0027/\u0027, \u0027-\u0027);",
+              "protected": "M:System.Uri.#ctor(System.String)"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\CacheService.cs",
+            "snippet": "var path = new Uri(feedUrl).AbsolutePath.Trim(\u0027/\u0027).Replace(\u0027/\u0027, \u0027-\u0027);",
+            "protectedSnippet": "M:System.Uri.#ctor(System.String)",
+            "label": "M:System.Uri.#ctor(System.String)",
+            "properties": {
+              "CharCount": "9478"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 252,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "5d10c2a0-3b92-44d9-b6f9-67ff788847d0",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var path = new Uri(feedUrl).AbsolutePath.Trim(\u0027/\u0027).Replace(\u0027/\u0027, \u0027-\u0027);",
+              "protected": "P:System.Uri.AbsolutePath"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\CacheService.cs",
+            "snippet": "var path = new Uri(feedUrl).AbsolutePath.Trim(\u0027/\u0027).Replace(\u0027/\u0027, \u0027-\u0027);",
+            "protectedSnippet": "P:System.Uri.AbsolutePath",
+            "label": "P:System.Uri.AbsolutePath",
+            "properties": {
+              "CharCount": "9478"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 252,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "b30b5d16-c233-4c2f-be98-dfe90e0b720f",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var host = new Uri(feedUrl).Host.Replace(\u0022.\u0022, \u0022-\u0022);",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\CacheService.cs",
+            "snippet": "var host = new Uri(feedUrl).Host.Replace(\u0022.\u0022, \u0022-\u0022);",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "9478"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 251,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "33f3cbad-68b4-459d-bb49-f090e86b7ce7",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var host = new Uri(feedUrl).Host.Replace(\u0022.\u0022, \u0022-\u0022);",
+              "protected": "M:System.Uri.#ctor(System.String)"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\CacheService.cs",
+            "snippet": "var host = new Uri(feedUrl).Host.Replace(\u0022.\u0022, \u0022-\u0022);",
+            "protectedSnippet": "M:System.Uri.#ctor(System.String)",
+            "label": "M:System.Uri.#ctor(System.String)",
+            "properties": {
+              "CharCount": "9478"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 251,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "3043cebc-fca4-44ae-86b1-29cecc07b2a1",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "private static string GetContent(SyndicationItem item, bool preferShortSummary)",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationItem"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "private static string GetContent(SyndicationItem item, bool preferShortSummary)",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationItem",
+            "label": "T:System.ServiceModel.Syndication.SyndicationItem",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 159,
+            "column": 4
+          }
+        },
+        {
+          "incidentId": "322e9a38-88b3-4dab-8007-204e17f2de56",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return item.Summary?.Text ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return item.Summary?.Text ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 179,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "8e28a46a-ec85-4794-a169-1926c4f4f840",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return item.Summary?.Text ?? \u0022\u0022;",
+              "protected": "T:System.ServiceModel.Syndication.TextSyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return item.Summary?.Text ?? \u0022\u0022;",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 179,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "4b5309d9-2061-40f2-b830-d0102c655e03",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return item.Summary?.Text ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Summary"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return item.Summary?.Text ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Summary",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Summary",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 179,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "faa9acf0-f0a2-440a-8123-dc58b3898100",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "using var reader = encoded.GetReader();",
+              "protected": "M:System.ServiceModel.Syndication.SyndicationElementExtension.GetReader"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "using var reader = encoded.GetReader();",
+            "protectedSnippet": "M:System.ServiceModel.Syndication.SyndicationElementExtension.GetReader",
+            "label": "M:System.ServiceModel.Syndication.SyndicationElementExtension.GetReader",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 174,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "4109052a-5db5-4e8a-8611-0723d8fe89b8",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationElementExtension.OuterNamespace"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationElementExtension.OuterNamespace",
+            "label": "P:System.ServiceModel.Syndication.SyndicationElementExtension.OuterNamespace",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 169,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "79a0c068-b7a4-4ae6-beef-7537e4d70a24",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationElementExtension.OuterName"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationElementExtension.OuterName",
+            "label": "P:System.ServiceModel.Syndication.SyndicationElementExtension.OuterName",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 169,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "205941ef-90e1-4b79-82b6-24bb4dcd6739",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationElementExtensionCollection"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationElementExtensionCollection",
+            "label": "T:System.ServiceModel.Syndication.SyndicationElementExtensionCollection",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 169,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "8e8ea2d7-cb86-46bd-81ba-10dfae600d60",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.ElementExtensions"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.ElementExtensions",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.ElementExtensions",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 169,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "ef2ecea9-3ab4-440c-8f1b-76f6f196e379",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationElementExtension"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var encoded = item.ElementExtensions\r\n            .FirstOrDefault(e =\u003E e.OuterName == \u0022encoded\u0022\r\n                              \u0026\u0026 e.OuterNamespace == \u0022http://purl.org/rss/1.0/modules/content/\u0022);",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationElementExtension",
+            "label": "T:System.ServiceModel.Syndication.SyndicationElementExtension",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 169,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "ea05f2eb-f380-4b7f-b0f7-bfd4976f1742",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return textContent.Text;",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return textContent.Text;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 166,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "bc8b65bb-c25a-40ea-a2ab-dc272317e7a4",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (item.Content is TextSyndicationContent textContent)\r\n            return textContent.Text;",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "if (item.Content is TextSyndicationContent textContent)\r\n            return textContent.Text;",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.SyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 165,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "11974462-df8b-47ad-b419-e0163db48e2a",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (item.Content is TextSyndicationContent textContent)\r\n            return textContent.Text;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Content"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "if (item.Content is TextSyndicationContent textContent)\r\n            return textContent.Text;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Content",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Content",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 165,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "a81fbcc5-10b0-459e-8424-eb88364a0a88",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return item.Summary.Text;",
+              "protected": "T:System.ServiceModel.Syndication.TextSyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return item.Summary.Text;",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 162,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "4eb628b9-80d8-4482-a0df-c8f5df64856a",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return item.Summary.Text;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Summary"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return item.Summary.Text;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Summary",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Summary",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 162,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "4d8a92db-a81f-4d40-85ca-95e619f13c9b",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "return item.Summary.Text;",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "return item.Summary.Text;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 162,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "123f7ea1-a31b-490a-9da9-f195fdd71340",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (preferShortSummary \u0026\u0026 !string.IsNullOrWhiteSpace(item.Summary?.Text))\r\n            return item.Summary.Text;",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "if (preferShortSummary \u0026\u0026 !string.IsNullOrWhiteSpace(item.Summary?.Text))\r\n            return item.Summary.Text;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 161,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "fce60ab5-d20b-4755-9a89-4231bf9a9a1b",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (preferShortSummary \u0026\u0026 !string.IsNullOrWhiteSpace(item.Summary?.Text))\r\n            return item.Summary.Text;",
+              "protected": "T:System.ServiceModel.Syndication.TextSyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "if (preferShortSummary \u0026\u0026 !string.IsNullOrWhiteSpace(item.Summary?.Text))\r\n            return item.Summary.Text;",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 161,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "77d2c813-ecce-4f68-80fa-1b68e6a97362",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "if (preferShortSummary \u0026\u0026 !string.IsNullOrWhiteSpace(item.Summary?.Text))\r\n            return item.Summary.Text;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Summary"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "if (preferShortSummary \u0026\u0026 !string.IsNullOrWhiteSpace(item.Summary?.Text))\r\n            return item.Summary.Text;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Summary",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Summary",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 161,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "67c6c481-0e61-46e9-a4d8-38a953ae0903",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 132,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "16150207-661c-4393-844b-75d3dedff975",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));",
+              "protected": "T:System.ServiceModel.Syndication.TextSyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 132,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "54327938-03b7-468d-a4f2-bbe36c152e42",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Title"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Title",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Title",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 132,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "916adf9c-4a1a-48d7-b65c-3298c580f809",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "19306"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "c5ceaace-a474-4cd9-8de1-df21608d2daa",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationLink.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationLink.Uri",
+            "label": "P:System.ServiceModel.Syndication.SyndicationLink.Uri",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "def96644-f58c-4d89-86e9-a03ad61c38f2",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Links"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Links",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Links",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "b2519eb6-8600-41a7-9b69-d53deb431868",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationLink"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationLink",
+            "label": "T:System.ServiceModel.Syndication.SyndicationLink",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "ff3f970c-4808-46fc-b4a6-49878a73a22d",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "19306"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "8f666016-5295-4628-a094-18803537e187",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationLink.Uri"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationLink.Uri",
+            "label": "P:System.ServiceModel.Syndication.SyndicationLink.Uri",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "abffe470-00c2-4735-b2b0-f82605cd8230",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationLink.RelationshipType"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationLink.RelationshipType",
+            "label": "P:System.ServiceModel.Syndication.SyndicationLink.RelationshipType",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "a6fb8918-d44f-48d5-89eb-128b76a9fa89",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Links"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Links",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Links",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "3d62c408-1ce1-4129-bd3d-97898a39c4fa",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationLink"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationLink",
+            "label": "T:System.ServiceModel.Syndication.SyndicationLink",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 126,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "19f414d7-f6d1-4398-8e62-cce0098a880d",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 113,
+            "column": 20
+          }
+        },
+        {
+          "incidentId": "e00c75b0-a445-4bd3-b6c7-d377d009846e",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());",
+              "protected": "T:System.ServiceModel.Syndication.TextSyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 113,
+            "column": 20
+          }
+        },
+        {
+          "incidentId": "27214b12-3d8b-4741-bf06-3c181f7b2844",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Title"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Title",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Title",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 113,
+            "column": 20
+          }
+        },
+        {
+          "incidentId": "1cf92ee7-4892-433f-98ea-124628a58870",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationCategory.Name"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationCategory.Name",
+            "label": "P:System.ServiceModel.Syndication.SyndicationCategory.Name",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 108,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "64293672-4df3-41a3-8177-4d830e0eae78",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Categories"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Categories",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Categories",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 108,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "25d60334-1204-436d-be4a-2ebaf8a818ee",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationCategory"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationCategory",
+            "label": "T:System.ServiceModel.Syndication.SyndicationCategory",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 108,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "e6cb1bb1-330e-45ec-93f8-c7bbbbc0e9b4",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());",
+              "protected": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "label": "P:System.ServiceModel.Syndication.TextSyndicationContent.Text",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 99,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "044bb956-28f8-4c33-96fa-ea9ae3ee2a65",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());",
+              "protected": "T:System.ServiceModel.Syndication.TextSyndicationContent"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "label": "T:System.ServiceModel.Syndication.TextSyndicationContent",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 99,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "1a2e7336-acd7-4f22-a64f-01a2f1e94a3e",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.Title"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.Title",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.Title",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 99,
+            "column": 16
+          }
+        },
+        {
+          "incidentId": "71b9a74f-9253-47cc-88b2-2bdafca0f4e9",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.LastUpdatedTime"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.LastUpdatedTime",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.LastUpdatedTime",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 91,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "53635af2-1821-4a7a-b5fd-7c66111972f7",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.PublishDate"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.PublishDate",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.PublishDate",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 91,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "a8f2c493-7e72-470c-b50c-46fce8a8a7a3",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationItem.PublishDate"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationItem.PublishDate",
+            "label": "P:System.ServiceModel.Syndication.SyndicationItem.PublishDate",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 91,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "50c25675-aa6e-4a41-b4e8-779c70d1976a",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "foreach (var item in feed.Items)\r\n        {\r\n            totalItems\u002B\u002B;\r\n            // Pick the best available date: PublishDate (RSS) or LastUpdatedTime (Atom)\r\n            // Convert to local DateOnly \u2014 releases happen during working hours, time doesn\u0027t matter\r\n            var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;\r\n\r\n            var pubDate = DateOnly.FromDateTime(pubDateOffset.LocalDateTime);\r\n\r\n            if (pubDate \u003C startDate || pubDate \u003E endDate)\r\n            {\r\n                ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());\r\n                skippedDate\u002B\u002B;\r\n                continue;\r\n            }\r\n\r\n            // Optional: filter by category label\r\n            if (keywords is { Count: \u003E 0 })\r\n            {\r\n                var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();\r\n                if (!cats.Any(c =\u003E keywords.Any(k =\u003E c.Contains(k))))\r\n                {\r\n                    ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());\r\n                    skippedCategory\u002B\u002B;\r\n                    continue;\r\n                }\r\n            }\r\n\r\n            var rawHtml = GetContent(item, preferShortSummary);\r\n            var plainText = FilterReleaseText(HtmlToText(rawHtml));\r\n\r\n            if (maxContentChars \u003E 0 \u0026\u0026 plainText.Length \u003E maxContentChars)\r\n                plainText = plainText[..maxContentChars].TrimEnd() \u002B \u0022 \u2026\u0022;\r\n\r\n            var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;\r\n\r\n            entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));\r\n        }",
+              "protected": "P:System.ServiceModel.Syndication.SyndicationFeed.Items"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "foreach (var item in feed.Items)\r\n        {\r\n            totalItems\u002B\u002B;\r\n            // Pick the best available date: PublishDate (RSS) or LastUpdatedTime (Atom)\r\n            // Convert to local DateOnly \u2014 releases happen during working hours, time doesn\u0027t matter\r\n            var pubDateOffset = item.PublishDate != DateTimeOffset.MinValue\r\n                ? item.PublishDate\r\n                : item.LastUpdatedTime;\r\n\r\n            var pubDate = DateOnly.FromDateTime(pubDateOffset.LocalDateTime);\r\n\r\n            if (pubDate \u003C startDate || pubDate \u003E endDate)\r\n            {\r\n                ServiceLogMessages.FeedItemSkippedDate(logger,\r\n                    pubDate, startDate, endDate, item.Title?.Text?.Trim());\r\n                skippedDate\u002B\u002B;\r\n                continue;\r\n            }\r\n\r\n            // Optional: filter by category label\r\n            if (keywords is { Count: \u003E 0 })\r\n            {\r\n                var cats = item.Categories\r\n                               .Select(c =\u003E c.Name.ToLowerInvariant())\r\n                               .ToList();\r\n                if (!cats.Any(c =\u003E keywords.Any(k =\u003E c.Contains(k))))\r\n                {\r\n                    ServiceLogMessages.FeedItemSkippedCategory(logger,\r\n                        string.Join(\u0022, \u0022, cats), item.Title?.Text?.Trim());\r\n                    skippedCategory\u002B\u002B;\r\n                    continue;\r\n                }\r\n            }\r\n\r\n            var rawHtml = GetContent(item, preferShortSummary);\r\n            var plainText = FilterReleaseText(HtmlToText(rawHtml));\r\n\r\n            if (maxContentChars \u003E 0 \u0026\u0026 plainText.Length \u003E maxContentChars)\r\n                plainText = plainText[..maxContentChars].TrimEnd() \u002B \u0022 \u2026\u0022;\r\n\r\n            var url = item.Links\r\n                          .FirstOrDefault(l =\u003E l.RelationshipType == \u0022alternate\u0022)\r\n                          ?.Uri?.ToString()\r\n                      ?? item.Links.FirstOrDefault()?.Uri?.ToString()\r\n                      ?? \u0022\u0022;\r\n\r\n            entries.Add(new ReleaseEntry(\r\n                Version: item.Title?.Text?.Trim() ?? \u0022\u0022,\r\n                PublishedAt: pubDate,\r\n                PlainText: plainText,\r\n                Url: url));\r\n        }",
+            "protectedSnippet": "P:System.ServiceModel.Syndication.SyndicationFeed.Items",
+            "label": "P:System.ServiceModel.Syndication.SyndicationFeed.Items",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 86,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "6d3da292-a7af-42d4-adbb-5a3b13b8c440",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "feed = SyndicationFeed.Load(xmlReader);",
+              "protected": "T:System.ServiceModel.Syndication.SyndicationFeed"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "feed = SyndicationFeed.Load(xmlReader);",
+            "protectedSnippet": "T:System.ServiceModel.Syndication.SyndicationFeed",
+            "label": "T:System.ServiceModel.Syndication.SyndicationFeed",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 69,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "927e8d9d-08c8-4285-9a41-9d5d23769b46",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3. Add package reference to System.ServiceModel.Syndication, 9.0.0-preview.6.24302.3",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "feed = SyndicationFeed.Load(xmlReader);",
+              "protected": "M:System.ServiceModel.Syndication.SyndicationFeed.Load(System.Xml.XmlReader)"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\Services\\AtomFeedService.cs",
+            "snippet": "feed = SyndicationFeed.Load(xmlReader);",
+            "protectedSnippet": "M:System.ServiceModel.Syndication.SyndicationFeed.Load(System.Xml.XmlReader)",
+            "label": "M:System.ServiceModel.Syndication.SyndicationFeed.Load(System.Xml.XmlReader)",
+            "properties": {
+              "PackageId": "System.ServiceModel.Syndication",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3",
+              "CharCount": "19306"
+            },
+            "line": 69,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "cb15b7e1-365b-4bd3-89e1-51d191514e19",
+          "ruleId": "Api.0002",
+          "description": "Breaking change: C# overload resolution prefers \u0060params\u0060 span-type overloads ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "await Task.WhenAll(\r\n                copilotWork, vscodeWork, vsWork,\r\n                Task.WhenAll(majorReleaseWork),\r\n                blogsWork, videosWork);",
+              "protected": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\NewsletterApp.Generators.cs",
+            "snippet": "await Task.WhenAll(\r\n                copilotWork, vscodeWork, vsWork,\r\n                Task.WhenAll(majorReleaseWork),\r\n                blogsWork, videosWork);",
+            "protectedSnippet": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})",
+            "label": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})",
+            "properties": {
+              "CharCount": "52594"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/core-libraries/9.0/params-overloads.md",
+                "isCustom": false
+              }
+            ],
+            "line": 961,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "0bf06aef-64b4-440e-99a9-39edfbccb07d",
+          "ruleId": "Api.0002",
+          "description": "Breaking change: C# overload resolution prefers \u0060params\u0060 span-type overloads ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "await Task.WhenAll(cliTask, sdkTask);",
+              "protected": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\NewsletterApp.cs",
+            "snippet": "await Task.WhenAll(cliTask, sdkTask);",
+            "protectedSnippet": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})",
+            "label": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})",
+            "properties": {
+              "CharCount": "33659"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/core-libraries/9.0/params-overloads.md",
+                "isCustom": false
+              }
+            ],
+            "line": 642,
+            "column": 18
+          }
+        },
+        {
+          "incidentId": "c9fc2659-2acb-4ec7-aefd-8a524b7e7a93",
+          "ruleId": "Api.0002",
+          "description": "Breaking change: C# overload resolution prefers \u0060params\u0060 span-type overloads ",
+          "projectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "await Task.WhenAll(modelsTask, pingTask);",
+              "protected": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})"
+            },
+            "kind": "File",
+            "path": "src\\NewsletterGenerator\\NewsletterApp.cs",
+            "snippet": "await Task.WhenAll(modelsTask, pingTask);",
+            "protectedSnippet": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})",
+            "label": "M:System.Threading.Tasks.Task.WhenAll(System.ReadOnlySpan{System.Threading.Tasks.Task})",
+            "properties": {
+              "CharCount": "33659"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/core-libraries/9.0/params-overloads.md",
+                "isCustom": false
+              }
+            ],
+            "line": 624,
+            "column": 16
+          }
+        }
+      ],
+      "features": [
+        {
+          "featureId": "WcfClient",
+          "incidents": [
+            "927e8d9d-08c8-4285-9a41-9d5d23769b46",
+            "6d3da292-a7af-42d4-adbb-5a3b13b8c440",
+            "50c25675-aa6e-4a41-b4e8-779c70d1976a",
+            "a8f2c493-7e72-470c-b50c-46fce8a8a7a3",
+            "53635af2-1821-4a7a-b5fd-7c66111972f7",
+            "71b9a74f-9253-47cc-88b2-2bdafca0f4e9",
+            "1a2e7336-acd7-4f22-a64f-01a2f1e94a3e",
+            "044bb956-28f8-4c33-96fa-ea9ae3ee2a65",
+            "e6cb1bb1-330e-45ec-93f8-c7bbbbc0e9b4",
+            "25d60334-1204-436d-be4a-2ebaf8a818ee",
+            "64293672-4df3-41a3-8177-4d830e0eae78",
+            "1cf92ee7-4892-433f-98ea-124628a58870",
+            "27214b12-3d8b-4741-bf06-3c181f7b2844",
+            "e00c75b0-a445-4bd3-b6c7-d377d009846e",
+            "19f414d7-f6d1-4398-8e62-cce0098a880d",
+            "3d62c408-1ce1-4129-bd3d-97898a39c4fa",
+            "a6fb8918-d44f-48d5-89eb-128b76a9fa89",
+            "abffe470-00c2-4735-b2b0-f82605cd8230",
+            "8f666016-5295-4628-a094-18803537e187",
+            "b2519eb6-8600-41a7-9b69-d53deb431868",
+            "def96644-f58c-4d89-86e9-a03ad61c38f2",
+            "c5ceaace-a474-4cd9-8de1-df21608d2daa",
+            "54327938-03b7-468d-a4f2-bbe36c152e42",
+            "16150207-661c-4393-844b-75d3dedff975",
+            "67c6c481-0e61-46e9-a4d8-38a953ae0903",
+            "77d2c813-ecce-4f68-80fa-1b68e6a97362",
+            "fce60ab5-d20b-4755-9a89-4231bf9a9a1b",
+            "123f7ea1-a31b-490a-9da9-f195fdd71340",
+            "4d8a92db-a81f-4d40-85ca-95e619f13c9b",
+            "4eb628b9-80d8-4482-a0df-c8f5df64856a",
+            "a81fbcc5-10b0-459e-8424-eb88364a0a88",
+            "11974462-df8b-47ad-b419-e0163db48e2a",
+            "bc8b65bb-c25a-40ea-a2ab-dc272317e7a4",
+            "ea05f2eb-f380-4b7f-b0f7-bfd4976f1742",
+            "ef2ecea9-3ab4-440c-8f1b-76f6f196e379",
+            "8e8ea2d7-cb86-46bd-81ba-10dfae600d60",
+            "205941ef-90e1-4b79-82b6-24bb4dcd6739",
+            "79a0c068-b7a4-4ae6-beef-7537e4d70a24",
+            "4109052a-5db5-4e8a-8611-0723d8fe89b8",
+            "faa9acf0-f0a2-440a-8123-dc58b3898100",
+            "4b5309d9-2061-40f2-b830-d0102c655e03",
+            "8e28a46a-ec85-4794-a169-1926c4f4f840",
+            "322e9a38-88b3-4dab-8007-204e17f2de56",
+            "3043cebc-fca4-44ae-86b1-29cecc07b2a1"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+      "startingProject": true,
+      "issues": 4,
+      "storyPoints": 5,
+      "properties": {
+        "appName": "NewsletterGenerator.Tests",
+        "projectKind": "DotNetCoreApp",
+        "frameworks": [
+          "net10.0"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": true,
+        "isTestProject": true,
+        "numberOfFiles": 12,
+        "numberOfCodeFiles": 10,
+        "linesTotal": 4504,
+        "linesOfCode": 1883,
+        "totalApiScanned": 2080,
+        "minLinesOfCodeToChange": 3,
+        "maxLinesOfCodeToChange": 3
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "f819cda1-6124-46ce-86e1-f69270bc6588",
+          "ruleId": "NuGet.0002",
+          "projectPath": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12",
+              "protected": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12"
+            },
+            "kind": "File",
+            "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+            "snippet": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12",
+            "protectedSnippet": "Microsoft.Extensions.Logging.Abstractions, 10.0.10\n\nRecommendation:\n\nRemove Microsoft.Extensions.Logging.Abstractions, and replace with new package Microsoft.Extensions.Logging.Abstractions 10.0.12",
+            "label": "Microsoft.Extensions.Logging.Abstractions 10.0.10",
+            "properties": {
+              "PackageId": "Microsoft.Extensions.Logging.Abstractions",
+              "PackageVersion": "10.0.10",
+              "PackageNewVersion": "10.0.12",
+              "PackageReplacements": null
+            }
+          }
+        },
+        {
+          "incidentId": "b8ad11d4-1797-44e4-94a5-386c7b906277",
+          "ruleId": "Project.0002",
+          "projectPath": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: net10.0\nRecommended target framework: net11.0",
+              "protected": "Current target framework: net10.0\nRecommended target framework: net11.0"
+            },
+            "kind": "File",
+            "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+            "snippet": "Current target framework: net10.0\nRecommended target framework: net11.0",
+            "protectedSnippet": "Current target framework: net10.0\nRecommended target framework: net11.0",
+            "properties": {
+              "CurrentTargetFramework": "net10.0",
+              "RecommendedTargetFramework": "net11.0"
+            }
+          }
+        },
+        {
+          "incidentId": "f653713c-a97c-4cea-95b1-d89e69d96d84",
+          "ruleId": "Api.0003",
+          "description": "Breaking change: URI length limits removed ",
+          "projectPath": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Uri.EscapeDataString(title)",
+              "protected": "T:System.Uri"
+            },
+            "kind": "File",
+            "path": "tests\\NewsletterGenerator.Tests\\NewsletterServiceTests.cs",
+            "snippet": "Uri.EscapeDataString(title)",
+            "protectedSnippet": "T:System.Uri",
+            "label": "T:System.Uri",
+            "properties": {
+              "CharCount": "8338"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/networking/10.0/uri-length-limits-removed.md",
+                "isCustom": false
+              }
+            ],
+            "line": 230,
+            "column": 35
+          }
+        },
+        {
+          "incidentId": "6d138a2a-ce15-42c8-af63-1adf396d2632",
+          "ruleId": "Api.0002",
+          "description": "Breaking change: Ambiguous overload resolution affecting StringValues implicit operators ",
+          "projectPath": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Assert.Equal(\r\n            string.Join(\r\n                Environment.NewLine,\r\n                \u0022## Release\u0022,\r\n                \u0022\u0022,\r\n                \u0022Release summary.\u0022,\r\n                \u0022\u0022,\r\n                \u0022- First item\u0022,\r\n                \u0022- Second item\u0022,\r\n                \u0022\u0022,\r\n                \u0022Following content.\u0022),\r\n            normalized);",
+              "protected": "M:System.String.Join(System.String,System.ReadOnlySpan{System.String})"
+            },
+            "kind": "File",
+            "path": "tests\\NewsletterGenerator.Tests\\NewsletterServiceTests.cs",
+            "snippet": "Assert.Equal(\r\n            string.Join(\r\n                Environment.NewLine,\r\n                \u0022## Release\u0022,\r\n                \u0022\u0022,\r\n                \u0022Release summary.\u0022,\r\n                \u0022\u0022,\r\n                \u0022- First item\u0022,\r\n                \u0022- Second item\u0022,\r\n                \u0022\u0022,\r\n                \u0022Following content.\u0022),\r\n            normalized);",
+            "protectedSnippet": "M:System.String.Join(System.String,System.ReadOnlySpan{System.String})",
+            "label": "M:System.String.Join(System.String,System.ReadOnlySpan{System.String})",
+            "properties": {
+              "CharCount": "8338"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/core-libraries/9.0/ambiguous-overload.md",
+                "isCustom": false
+              }
+            ],
+            "line": 95,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "a3155840-931a-4343-a466-3636e8695b6a",
+          "ruleId": "Api.0002",
+          "description": "Breaking change: Ambiguous overload resolution affecting StringValues implicit operators ",
+          "projectPath": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "var markdown = string.Join(\r\n            Environment.NewLine,\r\n            \u0022## Release\u0022,\r\n            \u0022\u0022,\r\n            \u0022Release summary.\u0022,\r\n            \u0022- First item\u0022,\r\n            \u0022- Second item\u0022,\r\n            \u0022Following content.\u0022);",
+              "protected": "M:System.String.Join(System.String,System.ReadOnlySpan{System.String})"
+            },
+            "kind": "File",
+            "path": "tests\\NewsletterGenerator.Tests\\NewsletterServiceTests.cs",
+            "snippet": "var markdown = string.Join(\r\n            Environment.NewLine,\r\n            \u0022## Release\u0022,\r\n            \u0022\u0022,\r\n            \u0022Release summary.\u0022,\r\n            \u0022- First item\u0022,\r\n            \u0022- Second item\u0022,\r\n            \u0022Following content.\u0022);",
+            "protectedSnippet": "M:System.String.Join(System.String,System.ReadOnlySpan{System.String})",
+            "label": "M:System.String.Join(System.String,System.ReadOnlySpan{System.String})",
+            "properties": {
+              "CharCount": "8338"
+            },
+            "links": [
+              {
+                "title": "API documentation",
+                "url": "https://github.com/dotnet/docs/blob/main/docs/core/compatibility/core-libraries/9.0/ambiguous-overload.md",
+                "isCustom": false
+              }
+            ],
+            "line": 84,
+            "column": 8
+          }
+        }
+      ],
+      "features": []
+    }
+  ],
+  "rules": {
+    "NuGet.0002": {
+      "id": "NuGet.0002",
+      "isFeature": false,
+      "description": "NuGet package upgrade is recommended for selected target framework.\n\nStandard .NET packages are recommended to have versions matching version of .NET that project targets.\n\nSome other packages also are known to work better for selected target frameworks.",
+      "label": "NuGet package upgrade is recommended",
+      "severity": "Potential",
+      "effort": 1,
+      "links": [
+        {
+          "url": "https://go.microsoft.com/fwlink/?linkid=2262530",
+          "isCustom": false
+        }
+      ]
+    },
+    "Project.0002": {
+      "id": "Project.0002",
+      "isFeature": false,
+      "description": "Project\u0027s target framework(s) needs to be changed to the new target framework that you selected for this upgrade.\n\nDuring upgrade target framework will be adjusted to corresponding platform when applicable. In some cases project would result in multiple target frameworks after the upgrade if it was using features that now have their own platforms in modern .NET frameworks (windows, iOS, Android etc).",
+      "label": "Project\u0027s target framework(s) needs to be changed",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Overview of porting from .NET Framework to .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265227",
+          "isCustom": false
+        },
+        {
+          "title": ".NET project SDKs",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265226",
+          "isCustom": false
+        }
+      ]
+    },
+    "Api.0003": {
+      "id": "Api.0003",
+      "isFeature": false,
+      "description": "API has a behavioral change in selected .NET version: code and binaries may behave differently at runtime without needing recompilation, but the new behavior might be undesirable and require updates.",
+      "label": "Behavioral change in selected .NET version",
+      "severity": "Potential",
+      "effort": 1
+    },
+    "Api.0002": {
+      "id": "Api.0002",
+      "isFeature": false,
+      "description": "API is source incompatible for selected .NET version: requires code changes to compile successfully when targeting a new version, such as removing obsolete APIs or changing method signatures.",
+      "label": "Source incompatible for selected .NET version",
+      "severity": "Potential",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Breaking changes in .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2262679",
+          "isCustom": false
+        }
+      ]
+    },
+    "WcfClient": {
+      "id": "WcfClient",
+      "isFeature": false,
+      "description": "WCF client-side APIs for building service clients that communicate with WCF services. These APIs are available as exact equivalents via NuGet packages - add System.ServiceModel.* NuGet packages (System.ServiceModel.Http, System.ServiceModel.Primitives, System.ServiceModel.NetTcp, etc.)",
+      "label": "WCF Client APIs",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "WCF Core",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2262679",
+          "isCustom": false
+        }
+      ]
+    }
+  }
+}

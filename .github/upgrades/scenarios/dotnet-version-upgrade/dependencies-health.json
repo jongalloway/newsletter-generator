@@ -1,0 +1,1783 @@
+{
+  "packageGovernance": {
+    "totalDistinctPackages": 45,
+    "totalVersionDriftInstances": 0,
+    "targetFramework": "net11.0",
+    "packages": [
+      {
+        "name": "GitHub.Copilot.SDK",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.0.15-preview.3",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.0.15-preview.3",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.ApplicationInsights",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "2.23.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "2.23.0",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Bcl.AsyncInterfaces",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "6.0.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "6.0.0",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.CodeCoverage",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "18.8.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "18.8.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.AI.Abstractions",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.2.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "10.2.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.Configuration.Abstractions",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "6.0.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "6.0.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.Configuration.Binder",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "6.0.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "6.0.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.10",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.10",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.Logging",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.12",
+        "isCompatible": true,
+        "description": "NuGet package upgrade is recommended",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": false
+          }
+        ],
+        "upgrade": {
+          "newVersion": "10.0.12"
+        }
+      },
+      {
+        "name": "Microsoft.Extensions.Logging.Abstractions",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.12",
+        "isCompatible": true,
+        "description": "NuGet package upgrade is recommended",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": false
+          }
+        ],
+        "upgrade": {
+          "newVersion": "10.0.12"
+        }
+      },
+      {
+        "name": "Microsoft.Extensions.Options",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.10",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Extensions.Primitives",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.10",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.NET.Test.Sdk",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "18.8.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "18.8.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Testing.Extensions.Telemetry",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.9.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.9.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.9.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.9.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Testing.Platform",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.9.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.9.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Testing.Platform.MSBuild",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.9.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.9.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.TestPlatform.ObjectModel",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "18.8.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "18.8.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.TestPlatform.TestHost",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "18.8.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "18.8.1",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.VisualStudio.Validation",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "17.13.22",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "17.13.22",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Microsoft.Win32.Registry",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "5.0.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "5.0.0",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Nerdbank.MessagePack",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.2.36",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.2.36",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "PolyType",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.3.1",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.3.1",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "2.10.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "2.10.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog.Extensions.Logging",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.1.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.1.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog.Extensions.Logging.File",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.0.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.0.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog.Formatting.Compact",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.1.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.1.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog.Sinks.Async",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.5.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.5.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog.Sinks.File",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Serilog.Sinks.RollingFile",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.3.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.3.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Spectre.Console",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "0.57.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "0.57.2",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Spectre.Console.Ansi",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "0.57.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "0.57.2",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "Spectre.Console.Cli",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "0.55.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "0.55.0",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "System.ServiceModel.Syndication",
+        "totalProjectCount": 2,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "10.0.10",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "10.0.10",
+            "projects": [
+              "NewsletterGenerator",
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.analyzers",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "1.27.0",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "1.27.0",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.runner.visualstudio",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.1.5",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.1.5",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.assert",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.common",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.core.mtp-v1",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.extensibility.core",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.mtp-v1",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.runner.common",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      },
+      {
+        "name": "xunit.v3.runner.inproc.console",
+        "totalProjectCount": 1,
+        "distinctVersionCount": 1,
+        "recommendedVersion": "3.2.2",
+        "isCompatible": true,
+        "description": "",
+        "versions": [
+          {
+            "version": "3.2.2",
+            "projects": [
+              "NewsletterGenerator.Tests"
+            ],
+            "isRecommended": true
+          }
+        ]
+      }
+    ]
+  },
+  "projects": [
+    {
+      "name": "NewsletterGenerator",
+      "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+      "isSdk": true,
+      "currentFrameworks": [
+        "net10.0"
+      ],
+      "targetFramework": "net11.0",
+      "dependencies": {
+        "packages": [
+          {
+            "name": "GitHub.Copilot.SDK",
+            "version": "1.0.15-preview.3",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "Microsoft.Extensions.AI.Abstractions",
+            "version": "10.2.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "GitHub.Copilot.SDK \u003E Microsoft.Extensions.AI.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Configuration.Abstractions",
+            "version": "6.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Microsoft.Extensions.Configuration.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Configuration.Binder",
+            "version": "6.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Microsoft.Extensions.Configuration.Binder"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.DependencyInjection",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.Extensions.Logging \u003E Microsoft.Extensions.DependencyInjection"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.Extensions.Logging.Abstractions \u003E Microsoft.Extensions.DependencyInjection.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Logging",
+            "version": "10.0.10",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "NuGet package upgrade is recommended",
+            "compatibility": "valid",
+            "recommendedVersion": "10.0.12",
+            "upgrade": {
+              "newVersion": "10.0.12"
+            }
+          },
+          {
+            "name": "Microsoft.Extensions.Logging.Abstractions",
+            "version": "10.0.10",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "NuGet package upgrade is recommended",
+            "compatibility": "valid",
+            "recommendedVersion": "10.0.12",
+            "upgrade": {
+              "newVersion": "10.0.12"
+            }
+          },
+          {
+            "name": "Microsoft.Extensions.Options",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.Extensions.Logging \u003E Microsoft.Extensions.Options"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Primitives",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.Extensions.Logging \u003E Microsoft.Extensions.Options \u003E Microsoft.Extensions.Primitives"
+            ]
+          },
+          {
+            "name": "Microsoft.VisualStudio.Validation",
+            "version": "17.13.22",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Nerdbank.MessagePack \u003E Microsoft.VisualStudio.Validation"
+            ]
+          },
+          {
+            "name": "Nerdbank.MessagePack",
+            "version": "1.2.36",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "PolyType",
+            "version": "1.3.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Nerdbank.MessagePack \u003E PolyType"
+            ]
+          },
+          {
+            "name": "Serilog",
+            "version": "2.10.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Serilog"
+            ]
+          },
+          {
+            "name": "Serilog.Extensions.Logging",
+            "version": "3.1.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Serilog.Extensions.Logging"
+            ]
+          },
+          {
+            "name": "Serilog.Extensions.Logging.File",
+            "version": "3.0.0",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "Serilog.Formatting.Compact",
+            "version": "1.1.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Serilog.Formatting.Compact"
+            ]
+          },
+          {
+            "name": "Serilog.Sinks.Async",
+            "version": "1.5.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Serilog.Sinks.Async"
+            ]
+          },
+          {
+            "name": "Serilog.Sinks.File",
+            "version": "3.2.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Serilog.Sinks.RollingFile \u003E Serilog.Sinks.File"
+            ]
+          },
+          {
+            "name": "Serilog.Sinks.RollingFile",
+            "version": "3.3.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Serilog.Extensions.Logging.File \u003E Serilog.Sinks.RollingFile"
+            ]
+          },
+          {
+            "name": "Spectre.Console",
+            "version": "0.57.2",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "Spectre.Console.Ansi",
+            "version": "0.57.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Spectre.Console \u003E Spectre.Console.Ansi"
+            ]
+          },
+          {
+            "name": "Spectre.Console.Cli",
+            "version": "0.55.0",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "System.ServiceModel.Syndication",
+            "version": "10.0.10",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "src\\NewsletterGenerator\\NewsletterGenerator.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          }
+        ],
+        "assemblies": [],
+        "projectReferences": [],
+        "frameworkReferences": []
+      }
+    },
+    {
+      "name": "NewsletterGenerator.Tests",
+      "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj",
+      "isSdk": true,
+      "currentFrameworks": [
+        "net10.0"
+      ],
+      "targetFramework": "net11.0",
+      "dependencies": {
+        "packages": [
+          {
+            "name": "GitHub.Copilot.SDK",
+            "version": "1.0.15-preview.3",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E GitHub.Copilot.SDK"
+            ]
+          },
+          {
+            "name": "Microsoft.ApplicationInsights",
+            "version": "2.23.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E Microsoft.Testing.Extensions.Telemetry \u003E Microsoft.ApplicationInsights"
+            ]
+          },
+          {
+            "name": "Microsoft.Bcl.AsyncInterfaces",
+            "version": "6.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E xunit.v3.extensibility.core \u003E xunit.v3.common \u003E Microsoft.Bcl.AsyncInterfaces"
+            ]
+          },
+          {
+            "name": "Microsoft.CodeCoverage",
+            "version": "18.8.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.NET.Test.Sdk \u003E Microsoft.CodeCoverage"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.AI.Abstractions",
+            "version": "10.2.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E GitHub.Copilot.SDK \u003E Microsoft.Extensions.AI.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Configuration.Abstractions",
+            "version": "6.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Microsoft.Extensions.Configuration.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Configuration.Binder",
+            "version": "6.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Microsoft.Extensions.Configuration.Binder"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.DependencyInjection",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Microsoft.Extensions.Logging \u003E Microsoft.Extensions.DependencyInjection"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.Extensions.Logging.Abstractions \u003E Microsoft.Extensions.DependencyInjection.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Logging",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "NuGet package upgrade is recommended",
+            "compatibility": "valid",
+            "recommendedVersion": "10.0.12",
+            "upgrade": {
+              "newVersion": "10.0.12"
+            },
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Microsoft.Extensions.Logging"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Logging.Abstractions",
+            "version": "10.0.10",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj"
+              }
+            ],
+            "description": "NuGet package upgrade is recommended",
+            "compatibility": "valid",
+            "recommendedVersion": "10.0.12",
+            "upgrade": {
+              "newVersion": "10.0.12"
+            }
+          },
+          {
+            "name": "Microsoft.Extensions.Options",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Microsoft.Extensions.Logging \u003E Microsoft.Extensions.Options"
+            ]
+          },
+          {
+            "name": "Microsoft.Extensions.Primitives",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Microsoft.Extensions.Logging \u003E Microsoft.Extensions.Options \u003E Microsoft.Extensions.Primitives"
+            ]
+          },
+          {
+            "name": "Microsoft.NET.Test.Sdk",
+            "version": "18.8.1",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "Microsoft.Testing.Extensions.Telemetry",
+            "version": "1.9.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E Microsoft.Testing.Extensions.Telemetry"
+            ]
+          },
+          {
+            "name": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+            "version": "1.9.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E Microsoft.Testing.Extensions.TrxReport.Abstractions"
+            ]
+          },
+          {
+            "name": "Microsoft.Testing.Platform",
+            "version": "1.9.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E Microsoft.Testing.Platform"
+            ]
+          },
+          {
+            "name": "Microsoft.Testing.Platform.MSBuild",
+            "version": "1.9.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E Microsoft.Testing.Platform.MSBuild"
+            ]
+          },
+          {
+            "name": "Microsoft.TestPlatform.ObjectModel",
+            "version": "18.8.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.NET.Test.Sdk \u003E Microsoft.TestPlatform.TestHost \u003E Microsoft.TestPlatform.ObjectModel"
+            ]
+          },
+          {
+            "name": "Microsoft.TestPlatform.TestHost",
+            "version": "18.8.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "Microsoft.NET.Test.Sdk \u003E Microsoft.TestPlatform.TestHost"
+            ]
+          },
+          {
+            "name": "Microsoft.VisualStudio.Validation",
+            "version": "17.13.22",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Nerdbank.MessagePack \u003E Microsoft.VisualStudio.Validation"
+            ]
+          },
+          {
+            "name": "Microsoft.Win32.Registry",
+            "version": "5.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E xunit.v3.runner.inproc.console \u003E xunit.v3.runner.common \u003E Microsoft.Win32.Registry"
+            ]
+          },
+          {
+            "name": "Nerdbank.MessagePack",
+            "version": "1.2.36",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Nerdbank.MessagePack"
+            ]
+          },
+          {
+            "name": "PolyType",
+            "version": "1.3.1",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Nerdbank.MessagePack \u003E PolyType"
+            ]
+          },
+          {
+            "name": "Serilog",
+            "version": "2.10.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Serilog"
+            ]
+          },
+          {
+            "name": "Serilog.Extensions.Logging",
+            "version": "3.1.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Serilog.Extensions.Logging"
+            ]
+          },
+          {
+            "name": "Serilog.Extensions.Logging.File",
+            "version": "3.0.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File"
+            ]
+          },
+          {
+            "name": "Serilog.Formatting.Compact",
+            "version": "1.1.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Serilog.Formatting.Compact"
+            ]
+          },
+          {
+            "name": "Serilog.Sinks.Async",
+            "version": "1.5.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Serilog.Sinks.Async"
+            ]
+          },
+          {
+            "name": "Serilog.Sinks.File",
+            "version": "3.2.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Serilog.Sinks.RollingFile \u003E Serilog.Sinks.File"
+            ]
+          },
+          {
+            "name": "Serilog.Sinks.RollingFile",
+            "version": "3.3.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Serilog.Extensions.Logging.File \u003E Serilog.Sinks.RollingFile"
+            ]
+          },
+          {
+            "name": "Spectre.Console",
+            "version": "0.57.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Spectre.Console"
+            ]
+          },
+          {
+            "name": "Spectre.Console.Ansi",
+            "version": "0.57.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Spectre.Console \u003E Spectre.Console.Ansi"
+            ]
+          },
+          {
+            "name": "Spectre.Console.Cli",
+            "version": "0.55.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E Spectre.Console.Cli"
+            ]
+          },
+          {
+            "name": "System.ServiceModel.Syndication",
+            "version": "10.0.10",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "NewsletterGenerator \u003E System.ServiceModel.Syndication"
+            ]
+          },
+          {
+            "name": "xunit.analyzers",
+            "version": "1.27.0",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.analyzers"
+            ]
+          },
+          {
+            "name": "xunit.runner.visualstudio",
+            "version": "3.1.5",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "xunit.v3",
+            "version": "3.2.2",
+            "isTransitive": false,
+            "isGlobal": false,
+            "isImplicit": false,
+            "definedIn": [
+              {
+                "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj"
+              }
+            ],
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": ""
+          },
+          {
+            "name": "xunit.v3.assert",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.assert"
+            ]
+          },
+          {
+            "name": "xunit.v3.common",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E xunit.v3.extensibility.core \u003E xunit.v3.common"
+            ]
+          },
+          {
+            "name": "xunit.v3.core.mtp-v1",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1"
+            ]
+          },
+          {
+            "name": "xunit.v3.extensibility.core",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E xunit.v3.extensibility.core"
+            ]
+          },
+          {
+            "name": "xunit.v3.mtp-v1",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1"
+            ]
+          },
+          {
+            "name": "xunit.v3.runner.common",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E xunit.v3.runner.inproc.console \u003E xunit.v3.runner.common"
+            ]
+          },
+          {
+            "name": "xunit.v3.runner.inproc.console",
+            "version": "3.2.2",
+            "isTransitive": true,
+            "isGlobal": false,
+            "isImplicit": false,
+            "description": "",
+            "compatibility": "valid",
+            "recommendedVersion": "",
+            "transitiveChain": [
+              "xunit.v3 \u003E xunit.v3.mtp-v1 \u003E xunit.v3.core.mtp-v1 \u003E xunit.v3.runner.inproc.console"
+            ]
+          }
+        ],
+        "assemblies": [],
+        "projectReferences": [
+          {
+            "name": "NewsletterGenerator",
+            "isTransitive": false,
+            "definedIn": [
+              {
+                "path": "tests\\NewsletterGenerator.Tests\\NewsletterGenerator.Tests.csproj"
+              }
+            ],
+            "referencedProjectPath": "src\\NewsletterGenerator\\NewsletterGenerator.csproj",
+            "compatibility": "valid"
+          }
+        ],
+        "frameworkReferences": []
+      }
+    }
+  ]
+}
