@@ -22,8 +22,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 11.0.x
-        dotnet-quality: preview
+        global-json-file: global.json
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
