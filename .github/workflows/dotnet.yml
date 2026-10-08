@@ -19,10 +19,46 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Select latest .NET 11 SDK
+      id: sdk-version
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        releases_url="https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/11.0/releases.json"
+        releases="$(curl --fail --silent --show-error --location "$releases_url")"
+        sdk_version="$(
+          jq -r '
+            [
+              .releases[]
+              | select(.sdk != null)
+              | {
+                  version: .sdk.version,
+                  type: (if (."release-version" | contains("-")) then "preview" else "stable" end),
+                  date: ."release-date"
+                }
+            ]
+            | if any(.[]; .type == "stable")
+              then map(select(.type == "stable"))
+              else .
+              end
+            | sort_by(.date, .version)
+            | last
+            | .version
+          ' <<< "$releases"
+        )"
+
+        if [[ -z "$sdk_version" || "$sdk_version" == "null" ]]; then
+          echo "Could not determine a .NET 11 SDK version from release metadata." >&2
+          exit 1
+        fi
+
+        echo "version=$sdk_version" >> "$GITHUB_OUTPUT"
+        echo "Selected .NET SDK: $sdk_version"
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 11.0.x
+        dotnet-version: ${{ steps.sdk-version.outputs.version }}
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
