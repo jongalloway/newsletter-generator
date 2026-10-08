@@ -65,8 +65,14 @@ public partial class VSCodeReleaseNotesService
                 if (string.Equals(edition, "Stable", StringComparison.OrdinalIgnoreCase))
                 {
                     // Extract the welcome highlights and detailed feature callouts
-                    // from the Stable release notes.
-                    if (stableHighlights.Count == 0)
+                    // from the Stable release notes, but only when the release shipped
+                    // inside the requested window. Otherwise the same highlights repeat
+                    // in every newsletter until the next stable release.
+                    var releaseDate = GetReleaseDate(markdown);
+                    if (stableHighlights.Count == 0
+                        && releaseDate is { } stableDate
+                        && stableDate >= startDate
+                        && stableDate <= endDate)
                     {
                         stableHighlights = ParseStableHighlights(markdown);
                         stableFeatureCallouts = ParseStableFeatureCallouts(markdown);
@@ -146,31 +152,60 @@ public partial class VSCodeReleaseNotesService
     [GeneratedRegex(@"^\*\s+\[([^\]]+)\]\([^)]*\):\s*(.*)", RegexOptions.IgnoreCase)]
     private static partial Regex StableHighlightBulletPattern();
 
+    [GeneratedRegex(@"^##\s+Release highlights\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex ReleaseHighlightsHeadingPattern();
+
+    private const string ReleaseHighlightsStartMarker = "<!-- RELEASE_HIGHLIGHTS_START -->";
+    private const string ReleaseHighlightsEndMarker = "<!-- RELEASE_HIGHLIGHTS_END -->";
+
     internal static List<string> ParseStableHighlights(string markdown)
     {
         var highlights = new List<string>();
         var lines = markdown.Split('\n');
-        var inWelcomeSection = false;
+        var inHighlightsSection = false;
+        var inReleaseHighlightsFormat = false;
 
         foreach (var rawLine in lines)
         {
             var line = rawLine.TrimEnd('\r');
 
-            // Start capturing after "Welcome to the" line
-            if (line.StartsWith("Welcome to the", StringComparison.OrdinalIgnoreCase))
+            if (!inHighlightsSection)
             {
-                inWelcomeSection = true;
+                // Current format: a RELEASE_HIGHLIGHTS marker or a "## Release highlights" heading.
+                if (line.StartsWith(ReleaseHighlightsStartMarker, StringComparison.OrdinalIgnoreCase)
+                    || ReleaseHighlightsHeadingPattern().IsMatch(line))
+                {
+                    inHighlightsSection = true;
+                    inReleaseHighlightsFormat = true;
+                    continue;
+                }
+
+                // Legacy format: a "Welcome to the <version> release..." intro paragraph.
+                if (line.StartsWith("Welcome to the", StringComparison.OrdinalIgnoreCase))
+                {
+                    inHighlightsSection = true;
+                    inReleaseHighlightsFormat = false;
+                }
+
                 continue;
             }
 
-            if (!inWelcomeSection)
-                continue;
+            if (line.StartsWith(ReleaseHighlightsEndMarker, StringComparison.OrdinalIgnoreCase))
+                break;
 
-            // Stop at "Happy Coding", a horizontal rule, or a ## heading
-            if (line.StartsWith("Happy Coding", StringComparison.OrdinalIgnoreCase)
+            if (inReleaseHighlightsFormat)
+            {
+                // This section opens with its own "## Release highlights" heading, so only a
+                // later "## " heading ends it.
+                if (line.StartsWith("## ") && !ReleaseHighlightsHeadingPattern().IsMatch(line))
+                    break;
+            }
+            else if (line.StartsWith("Happy Coding", StringComparison.OrdinalIgnoreCase)
                 || line.StartsWith("---")
                 || line.StartsWith("## "))
+            {
                 break;
+            }
 
             // Match bullets like: * [Title](#anchor): description
             var match = StableHighlightBulletPattern().Match(line);
@@ -305,6 +340,32 @@ public partial class VSCodeReleaseNotesService
                 continue;
 
             return trimmed["ProductEdition:".Length..].Trim();
+        }
+
+        return null;
+    }
+
+    internal static DateOnly? GetReleaseDate(string markdown)
+    {
+        if (!markdown.StartsWith("---"))
+            return null;
+
+        var endIndex = markdown.IndexOf("---", 3, StringComparison.Ordinal);
+        if (endIndex < 0)
+            return null;
+
+        var frontMatter = markdown[3..endIndex];
+
+        foreach (var line in frontMatter.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith("Date:", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var value = trimmed["Date:".Length..].Trim();
+            return DateOnly.TryParse(value, CultureInfo.InvariantCulture, out var date)
+                ? date
+                : null;
         }
 
         return null;

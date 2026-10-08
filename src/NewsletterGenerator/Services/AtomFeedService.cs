@@ -1,5 +1,8 @@
+using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.ServiceModel.Syndication;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Microsoft.Extensions.Logging;
@@ -55,6 +58,13 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         {
             logger.LogWarning(ex, "Feed fetch timed out for {Url}", feedUrl);
             return new FeedFetchResult([], 0, 0, 0, 0, 0);
+        }
+
+        if (IsGitHubReleasesFeed(feedUrl))
+        {
+            var githubApiResult = await TryFetchGitHubReleaseEntriesAsync(feedUrl, startDate, endDate, cancellationToken);
+            if (githubApiResult is not null)
+                return githubApiResult;
         }
 
         SyndicationFeed feed;
@@ -153,6 +163,176 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             result.Count,
             skippedDate,
             skippedCategory);
+    }
+
+    private static bool IsGitHubReleasesFeed(string feedUrl)
+    {
+        if (!Uri.TryCreate(feedUrl, UriKind.Absolute, out var uri))
+            return false;
+
+        return uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+            && uri.AbsolutePath.EndsWith("/releases.atom", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<FeedFetchResult?> TryFetchGitHubReleaseEntriesAsync(
+        string feedUrl,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken)
+    {
+        if (!TryBuildGitHubReleaseApiUrl(feedUrl, out var apiUrl))
+            return null;
+
+        var allEntries = new List<ReleaseEntry>();
+        var page = 1;
+
+        // The GitHub releases API has no date-range query parameter (unlike /commits or
+        // /issues, which support `since`), so we can't ask the server to filter for us.
+        // It does, however, return releases newest-first, so once a page contains an
+        // entry published before startDate we know every later page is older still —
+        // stop paginating instead of walking the repo's entire release history.
+        while (true)
+        {
+            var pageUrl = $"{apiUrl}?per_page=100&page={page}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, pageUrl);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            request.Headers.UserAgent.ParseAdd("NewsletterGenerator/1.0");
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogWarning(ex, "GitHub releases API fetch failed for {Url}: {Message}", feedUrl, ex.Message);
+                return null;
+            }
+            catch (TaskCanceledException ex)
+            {
+                logger.LogWarning(ex, "GitHub releases API request timed out for {Url}", feedUrl);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("GitHub releases API returned {StatusCode} for {Url}", response.StatusCode, feedUrl);
+                response.Dispose();
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            response.Dispose();
+
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+                break;
+
+            var pageItems = document.RootElement.EnumerateArray().ToArray();
+            if (pageItems.Length == 0)
+                break;
+
+            var passedStartDate = false;
+
+            foreach (var item in pageItems)
+            {
+                if (!TryParseGitHubReleaseEntry(item, out var releaseEntry))
+                    continue;
+
+                allEntries.Add(releaseEntry);
+
+                if (releaseEntry.PublishedAt < startDate)
+                    passedStartDate = true;
+            }
+
+            if (passedStartDate || pageItems.Length < 100)
+                break;
+
+            page++;
+        }
+
+        var filtered = allEntries
+            .Where(e => e.PublishedAt >= startDate && e.PublishedAt <= endDate)
+            .OrderByDescending(e => e.PublishedAt)
+            .ToList();
+
+        return new FeedFetchResult(
+            filtered,
+            allEntries.Count,
+            filtered.Count,
+            filtered.Count,
+            Math.Max(0, allEntries.Count - filtered.Count),
+            0);
+    }
+
+    private static bool TryBuildGitHubReleaseApiUrl(string feedUrl, out string apiUrl)
+    {
+        apiUrl = string.Empty;
+
+        if (!Uri.TryCreate(feedUrl, UriKind.Absolute, out var uri)
+            || !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+            || !uri.AbsolutePath.EndsWith("/releases.atom", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var path = uri.AbsolutePath.Trim('/');
+        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length < 2 || parts[^1].Equals("releases.atom", StringComparison.OrdinalIgnoreCase))
+        {
+            var repoPath = string.Join('/', parts.Take(parts.Length - 1));
+            if (string.IsNullOrWhiteSpace(repoPath))
+                return false;
+
+            apiUrl = $"https://api.github.com/repos/{repoPath}/releases";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseGitHubReleaseEntry(JsonElement item, out ReleaseEntry releaseEntry)
+    {
+        releaseEntry = default!;
+
+        if (!item.TryGetProperty("html_url", out var htmlUrlElement) || string.IsNullOrWhiteSpace(htmlUrlElement.GetString()))
+            return false;
+
+        var title = item.TryGetProperty("tag_name", out var tagNameElement)
+            ? tagNameElement.GetString()
+            : item.TryGetProperty("name", out var nameElement)
+                ? nameElement.GetString()
+                : null;
+
+        if (string.IsNullOrWhiteSpace(title))
+            return false;
+
+        var publishedAtString = item.TryGetProperty("published_at", out var publishedAtElement)
+            ? publishedAtElement.GetString()
+            : item.TryGetProperty("created_at", out var createdAtElement)
+                ? createdAtElement.GetString()
+                : null;
+
+        if (!DateTimeOffset.TryParse(
+                publishedAtString,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var publishedDate))
+        {
+            return false;
+        }
+
+        var plainText = item.TryGetProperty("body", out var bodyElement)
+            ? bodyElement.GetString() ?? string.Empty
+            : string.Empty;
+
+        releaseEntry = new ReleaseEntry(
+            Version: title,
+            PublishedAt: DateOnly.FromDateTime(publishedDate.UtcDateTime),
+            PlainText: FilterReleaseText(plainText),
+            Url: htmlUrlElement.GetString() ?? string.Empty);
+
+        return true;
     }
 
     // ── Content extraction ────────────────────────────────────────────────────
