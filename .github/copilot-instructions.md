@@ -19,7 +19,7 @@ There are no tests in this project. The CI workflow (`dotnet.yml`) runs `dotnet 
 
 ## Architecture
 
-This is a .NET 10 console app that generates a weekly markdown newsletter about GitHub Copilot CLI & SDK updates. It uses top-level statements in `Program.cs` as the entry point (no `Main` method).
+This is a .NET 11 console app (built against .NET 11 RC1) that generates a weekly markdown newsletter about GitHub Copilot CLI & SDK updates. It uses top-level statements in `Program.cs` as the entry point (no `Main` method).
 
 ### Pipeline
 
