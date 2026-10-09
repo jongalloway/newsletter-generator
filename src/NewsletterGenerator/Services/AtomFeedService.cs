@@ -27,6 +27,13 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         ServiceLogMessages.FetchingFeed(logger, feedUrl, startDate, endDate);
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
 
+        if (IsGitHubReleasesFeed(feedUrl))
+        {
+            var githubApiResult = await TryFetchGitHubReleaseEntriesAsync(feedUrl, startDate, endDate, cancellationToken);
+            if (githubApiResult is not null)
+                return githubApiResult;
+        }
+
         string xml;
         try
         {
@@ -58,13 +65,6 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         {
             logger.LogWarning(ex, "Feed fetch timed out for {Url}", feedUrl);
             return new FeedFetchResult([], 0, 0, 0, 0, 0);
-        }
-
-        if (IsGitHubReleasesFeed(feedUrl))
-        {
-            var githubApiResult = await TryFetchGitHubReleaseEntriesAsync(feedUrl, startDate, endDate, cancellationToken);
-            if (githubApiResult is not null)
-                return githubApiResult;
         }
 
         SyndicationFeed feed;
@@ -186,11 +186,8 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         var allEntries = new List<ReleaseEntry>();
         var page = 1;
 
-        // The GitHub releases API has no date-range query parameter (unlike /commits or
-        // /issues, which support `since`), so we can't ask the server to filter for us.
-        // It does, however, return releases newest-first, so once a page contains an
-        // entry published before startDate we know every later page is older still —
-        // stop paginating instead of walking the repo's entire release history.
+        // Creation order is not publication order: recently published drafts can
+        // appear on later pages. Fetch every page before filtering by publication date.
         while (true)
         {
             var pageUrl = $"{apiUrl}?per_page=100&page={page}";
@@ -232,20 +229,15 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             if (pageItems.Length == 0)
                 break;
 
-            var passedStartDate = false;
-
             foreach (var item in pageItems)
             {
                 if (!TryParseGitHubReleaseEntry(item, out var releaseEntry))
                     continue;
 
                 allEntries.Add(releaseEntry);
-
-                if (releaseEntry.PublishedAt < startDate)
-                    passedStartDate = true;
             }
 
-            if (passedStartDate || pageItems.Length < 100)
+            if (pageItems.Length < 100)
                 break;
 
             page++;
@@ -328,7 +320,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
 
         releaseEntry = new ReleaseEntry(
             Version: title,
-            PublishedAt: DateOnly.FromDateTime(publishedDate.UtcDateTime),
+            PublishedAt: DateOnly.FromDateTime(publishedDate.LocalDateTime),
             PlainText: FilterReleaseText(plainText),
             Url: htmlUrlElement.GetString() ?? string.Empty);
 

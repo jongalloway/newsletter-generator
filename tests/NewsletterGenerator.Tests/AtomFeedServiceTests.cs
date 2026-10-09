@@ -272,7 +272,7 @@ public class AtomFeedServiceTests
     }
 
     [Fact]
-    public async Task FetchFeedWithMetricsAsync_StopsPaginatingOnceOlderThanStartDate()
+    public async Task FetchFeedWithMetricsAsync_IncludesRecentlyPublishedReleaseOnLaterPage()
     {
         const string atomFeed = """
             <?xml version="1.0" encoding="utf-8"?>
@@ -282,13 +282,11 @@ public class AtomFeedServiceTests
             </feed>
             """;
 
-        // A full 100-item first page whose last entry is already older than startDate.
-        // The server has no date-range parameter, so pagination must stop here based on
-        // the dates in the response rather than walking every page in the repo's history.
+        // Older publications on page 1 must not hide a newly published draft on page 2.
         var releases = new List<string>();
         for (var i = 0; i < 100; i++)
         {
-            var publishedAt = new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero).AddDays(-i);
+            var publishedAt = new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.Zero).AddDays(-i);
             releases.Add($$"""
                 {
                   "html_url": "https://github.com/github/copilot-sdk/releases/tag/v1.0.{{100 - i}}",
@@ -300,7 +298,16 @@ public class AtomFeedServiceTests
         }
         var githubApiPage1 = $"[{string.Join(",", releases)}]";
 
-        using var handler = new PaginationTrackingHttpMessageHandler(atomFeed, githubApiPage1);
+        const string githubApiPage2 = """
+            [{
+              "html_url": "https://github.com/github/copilot-sdk/releases/tag/v1.0.101",
+              "tag_name": "v1.0.101",
+              "created_at": "2026-01-01T12:00:00Z",
+              "published_at": "2026-10-07T12:00:00Z",
+              "body": "Newly published draft"
+            }]
+            """;
+        using var handler = new PaginationTrackingHttpMessageHandler(atomFeed, githubApiPage1, githubApiPage2);
         using var httpClient = new HttpClient(handler);
         var service = new AtomFeedService(NullLogger<AtomFeedService>.Instance, httpClient);
 
@@ -310,8 +317,88 @@ public class AtomFeedServiceTests
             new DateOnly(2026, 10, 8),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, handler.GitHubApiRequestCount);
-        Assert.True(result.Entries.Count < 100, "Expected the date filter to exclude older entries from the single fetched page.");
+        Assert.Equal(2, handler.GitHubApiRequestCount);
+        Assert.Equal("v1.0.101", Assert.Single(result.Entries).Version);
+        Assert.Equal(101, result.TotalItems);
+        Assert.Equal(100, result.SkippedDateItems);
+    }
+
+    [Fact]
+    public async Task FetchFeedWithMetricsAsync_UsesApiWithoutDownloadingUnavailableAtomFeed()
+    {
+        const string apiResponse = """
+            [{
+              "html_url": "https://github.com/github/copilot-sdk/releases/tag/v1.0.17",
+              "tag_name": "v1.0.17",
+              "published_at": "2026-10-07T12:00:00Z",
+              "body": "New feature"
+            }]
+            """;
+        using var handler = new GitHubReleaseStubHttpMessageHandler("", apiResponse,
+            atomStatus: HttpStatusCode.ServiceUnavailable);
+        using var httpClient = new HttpClient(handler);
+        var service = new AtomFeedService(NullLogger<AtomFeedService>.Instance, httpClient);
+
+        var result = await service.FetchFeedWithMetricsAsync(
+            "https://github.com/github/copilot-sdk/releases.atom",
+            new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 8),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal("v1.0.17", Assert.Single(result.Entries).Version);
+        Assert.Equal(0, handler.AtomRequestCount);
+    }
+
+    [Fact]
+    public async Task FetchFeedWithMetricsAsync_FallsBackToAtomWhenApiUnavailable()
+    {
+        const string atomFeed = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>SDK releases</title>
+              <entry>
+                <id>v1.0.17</id>
+                <title>v1.0.17</title>
+                <updated>2026-10-07T12:00:00Z</updated>
+                <content type="html">&lt;p&gt;New feature&lt;/p&gt;</content>
+              </entry>
+            </feed>
+            """;
+        using var handler = new GitHubReleaseStubHttpMessageHandler(atomFeed, "",
+            apiStatus: HttpStatusCode.ServiceUnavailable);
+        using var httpClient = new HttpClient(handler);
+        var service = new AtomFeedService(NullLogger<AtomFeedService>.Instance, httpClient);
+
+        var result = await service.FetchFeedWithMetricsAsync(
+            "https://github.com/github/copilot-sdk/releases.atom",
+            new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 8),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal("v1.0.17", Assert.Single(result.Entries).Version);
+        Assert.Equal(1, handler.AtomRequestCount);
+    }
+
+    [Theory]
+    [InlineData("2026-10-08T00:30:00Z")]
+    [InlineData("2026-10-08T23:30:00Z")]
+    public async Task FetchFeedWithMetricsAsync_UsesLocalPublicationDate(string timestamp)
+    {
+        var publishedAt = DateTimeOffset.Parse(timestamp, System.Globalization.CultureInfo.InvariantCulture);
+        var expectedDate = DateOnly.FromDateTime(publishedAt.LocalDateTime);
+        var apiResponse = $$"""
+            [{
+              "html_url": "https://github.com/github/copilot-sdk/releases/tag/v1.0.17",
+              "tag_name": "v1.0.17",
+              "published_at": "{{timestamp}}",
+              "body": "New feature"
+            }]
+            """;
+        using var httpClient = new HttpClient(new GitHubReleaseStubHttpMessageHandler("", apiResponse));
+        var service = new AtomFeedService(NullLogger<AtomFeedService>.Instance, httpClient);
+
+        var result = await service.FetchFeedWithMetricsAsync(
+            "https://github.com/github/copilot-sdk/releases.atom", expectedDate, expectedDate,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedDate, Assert.Single(result.Entries).PublishedAt);
     }
 
     private sealed class StubHttpMessageHandler(string content) : HttpMessageHandler
@@ -327,8 +414,13 @@ public class AtomFeedServiceTests
         }
     }
 
-    private sealed class GitHubReleaseStubHttpMessageHandler(string atomFeed, string githubApiResponse) : HttpMessageHandler
+    private sealed class GitHubReleaseStubHttpMessageHandler(
+        string atomFeed, string githubApiResponse,
+        HttpStatusCode apiStatus = HttpStatusCode.OK,
+        HttpStatusCode atomStatus = HttpStatusCode.OK) : HttpMessageHandler
     {
+        public int AtomRequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var content = request.RequestUri != null && request.RequestUri.Host == "api.github.com"
@@ -339,7 +431,11 @@ public class AtomFeedServiceTests
                 ? "application/json"
                 : "application/atom+xml";
 
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            var isApi = request.RequestUri?.Host == "api.github.com";
+            if (!isApi)
+                AtomRequestCount++;
+
+            var response = new HttpResponseMessage(isApi ? apiStatus : atomStatus)
             {
                 Content = new StringContent(content, Encoding.UTF8, mediaType)
             };
@@ -348,7 +444,8 @@ public class AtomFeedServiceTests
         }
     }
 
-    private sealed class PaginationTrackingHttpMessageHandler(string atomFeed, string githubApiPage1) : HttpMessageHandler
+    private sealed class PaginationTrackingHttpMessageHandler(
+        string atomFeed, string githubApiPage1, string githubApiPage2) : HttpMessageHandler
     {
         public int GitHubApiRequestCount { get; private set; }
 
@@ -359,11 +456,12 @@ public class AtomFeedServiceTests
             if (isGitHubApi)
             {
                 GitHubApiRequestCount++;
-                // Only page 1 is ever expected to be requested; serve an empty array for
-                // any further page so the test fails loudly (via the count assertion)
-                // rather than looping forever if the early-exit regresses.
-                var isPage1 = request.RequestUri!.Query.Contains("page=1");
-                var content = isPage1 ? githubApiPage1 : "[]";
+                var content = request.RequestUri!.Query switch
+                {
+                    "?per_page=100&page=1" => githubApiPage1,
+                    "?per_page=100&page=2" => githubApiPage2,
+                    _ => "[]"
+                };
 
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {

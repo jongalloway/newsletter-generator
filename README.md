@@ -95,6 +95,11 @@ falls within that window. The parser supports both the current **Release highlig
 section and the older **Welcome to the...** introduction. Insiders features are
 filtered using their dated section headings. Filtering happens before AI summarization.
 
+GitHub releases are fetched from the paginated Releases API, with Atom as a fallback
+when the API is unavailable. All pages are checked because recently published drafts
+can appear after older publications. Release dates use the local calendar, matching
+the Atom feeds; only releases in the selected window reach AI summarization.
+
 ## Usage
 
 ### Basic usage
