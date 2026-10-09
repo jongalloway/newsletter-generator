@@ -7,7 +7,7 @@ Detailed findings live alongside this file in `assessment/`. This page is the in
 ## Table of Contents
 
 - [Executive Summary](#executive-summary)
-  - [Highlevel Metrics](#highlevel-metrics)
+  - [High-level Metrics](#high-level-metrics)
   - [Projects Compatibility](#projects-compatibility)
   - [Package Compatibility](#package-compatibility)
   - [API Compatibility](#api-compatibility)
@@ -22,7 +22,7 @@ Detailed findings live alongside this file in `assessment/`. This page is the in
 
 ## Executive Summary
 
-### Highlevel Metrics
+### High-level Metrics
 
 | Metric | Count | Status |
 | :--- | :---: | :--- |

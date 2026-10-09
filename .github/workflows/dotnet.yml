@@ -53,6 +53,9 @@ jobs:
           exit 1
         fi
 
+        jq --arg version "$sdk_version" '.sdk.version = $version' global.json > global.json.tmp
+        mv global.json.tmp global.json
+
         echo "version=$sdk_version" >> "$GITHUB_OUTPUT"
         echo "Selected .NET SDK: $sdk_version"
     - name: Setup .NET

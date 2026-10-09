@@ -19,7 +19,7 @@
 
 **Depends on (1)** — projects this one references:
 
-- [D:\Users\Jon\Documents\GitHub\newsletter-generator\src\NewsletterGenerator\NewsletterGenerator.csproj](../projects/NewsletterGenerator.md)
+- [src/NewsletterGenerator/NewsletterGenerator.csproj](../projects/NewsletterGenerator.md)
 
 ## Dependency Graph
 
