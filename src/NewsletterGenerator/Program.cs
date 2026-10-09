@@ -94,7 +94,7 @@ internal sealed class GenerateSettings : CommandSettings
 
 internal sealed class GenerateCommand : AsyncCommand<GenerateSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, GenerateSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, GenerateSettings settings, CancellationToken cancellationToken)
     {
         return await NewsletterApp.RunGenerateAsync(settings);
     }
@@ -102,7 +102,7 @@ internal sealed class GenerateCommand : AsyncCommand<GenerateSettings>
 
 internal sealed class ListModelsCommand : AsyncCommand<EmptyCommandSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellationToken)
     {
         var models = await NewsletterApp.PrintCopilotStartupStatusAsync();
         if (models == null || models.Count == 0)
@@ -127,7 +127,7 @@ internal sealed class ListModelsCommand : AsyncCommand<EmptyCommandSettings>
 
 internal sealed class ClearCacheCommand : Command<EmptyCommandSettings>
 {
-    protected override int Execute(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellationToken)
+    public override int Execute(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellationToken)
     {
         var repoRoot = NewsletterApp.FindRepoRoot(Directory.GetCurrentDirectory());
         var cacheDir = Path.Combine(repoRoot, "src", "NewsletterGenerator", ".cache");
@@ -146,7 +146,7 @@ internal sealed class ClearCacheCommand : Command<EmptyCommandSettings>
 
 internal sealed class DoctorCommand : AsyncCommand<EmptyCommandSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellationToken)
     {
         var models = await NewsletterApp.PrintCopilotStartupStatusAsync();
         var healthy = models != null && models.Count > 0;
