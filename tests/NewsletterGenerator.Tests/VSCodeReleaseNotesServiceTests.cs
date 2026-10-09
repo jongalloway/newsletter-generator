@@ -150,6 +150,66 @@ public class VSCodeReleaseNotesServiceTests
     }
 
     [Fact]
+    public void ParseStableHighlights_ExtractsBulletsFromReleaseHighlightsSection()
+    {
+        var markdown = """
+            ---
+            Order: 150
+            TOCTitle: October 2026
+            ProductEdition: Stable
+            Date: 2026-10-07
+            ---
+            # Visual Studio Code 1.141
+
+            <!-- RELEASE_HIGHLIGHTS_START -->
+            ## Release highlights
+
+            This release makes it easier to manage agent sessions.
+
+            * [Clean up worktree storage](#reclaim-storage-from-inactive-worktrees): Reclaim disk space from inactive agent session worktrees.
+            * [Cross-platform sandboxing](#sandboxing-on-windows): Run agents in a sandbox on Windows.
+            * [Arrange sessions](#arrange-your-sessions): Drag sessions between windows.
+
+            <!-- RELEASE_HIGHLIGHTS_END -->
+
+            ## Agent sessions
+
+            * [Not a highlight](#nope): should be ignored.
+            """;
+
+        var highlights = VSCodeReleaseNotesService.ParseStableHighlights(markdown);
+
+        Assert.Equal(3, highlights.Count);
+        Assert.Equal("Clean up worktree storage: Reclaim disk space from inactive agent session worktrees.", highlights[0]);
+        Assert.Equal("Cross-platform sandboxing: Run agents in a sandbox on Windows.", highlights[1]);
+        Assert.Equal("Arrange sessions: Drag sessions between windows.", highlights[2]);
+    }
+
+    [Fact]
+    public void ParseStableHighlights_StopsAtNextHeadingWhenEndMarkerMissing()
+    {
+        var markdown = """
+            ---
+            ProductEdition: Stable
+            ---
+            # Visual Studio Code 1.141
+
+            ## Release highlights
+
+            * [First](#one): first highlight.
+
+            ## Agent sessions
+
+            * [Not a highlight](#nope): should be ignored.
+            """;
+
+        var highlights = VSCodeReleaseNotesService.ParseStableHighlights(markdown);
+
+        Assert.Single(highlights);
+        Assert.Equal("First: first highlight.", highlights[0]);
+    }
+
+    [Fact]
     public async Task GetReleaseNotesFetchResultForDateRangeAsync_UsesStableVersionPlusOneForInsiders()
     {
         using var httpClient = new HttpClient(new ReleaseNotesHttpMessageHandler());
@@ -166,11 +226,90 @@ public class VSCodeReleaseNotesServiceTests
         Assert.Single(result.ReleaseNotes.Features);
     }
 
-    private sealed class ReleaseNotesHttpMessageHandler : HttpMessageHandler
+    [Theory]
+    [InlineData(1, 8, 6)]
+    [InlineData(7, 7, 6)]
+    [InlineData(1, 6, 0)]
+    [InlineData(8, 15, 0)]
+    public async Task GetReleaseNotesFetchResultForDateRangeAsync_IncludesModernStableHighlightsOnlyInWindow(
+        int startDay, int endDay, int expectedHighlights)
+    {
+        const string stableMarkdown = """
+            ---
+            ProductEdition: Stable
+            Date: 2026-10-07
+            ---
+            # Visual Studio Code 1.141
+
+            <!-- RELEASE_HIGHLIGHTS_START -->
+            ## Release highlights
+
+            Highlights for this release.
+
+            * [Clean up worktree storage](#worktrees): Remove inactive worktrees.
+            * [Cross-platform sandboxing](#sandboxing): Restrict file and network access.
+            * [Arrange sessions](#grid): View sessions side by side.
+            * [Continue external sessions](#external): Resume local conversations.
+            * [Block pasting](#paste): Paste rows across successive lines.
+            * [Multiple GitHub Enterprise instances](#enterprise): Use multiple enterprise accounts.
+            <!-- RELEASE_HIGHLIGHTS_END -->
+
+            ## Agent loop
+            ### Worktree cleanup
+            Remove inactive worktrees on demand.
+
+            * [Not a highlight](#other): Ignore this bullet.
+            """;
+        const string insidersMarkdown = """
+            ---
+            ProductEdition: Insiders
+            ---
+            ## October 8, 2026 - Editor
+            * Merge highlights from multiple providers.
+            """;
+        using var httpClient = new HttpClient(new ReleaseNotesHttpMessageHandler(
+            141, stableMarkdown, insidersMarkdown));
+        var service = new VSCodeReleaseNotesService(httpClient);
+
+        var result = await service.GetReleaseNotesFetchResultForDateRangeAsync(
+            new DateOnly(2026, 10, startDay),
+            new DateOnly(2026, 10, endDay));
+
+        Assert.Equal(expectedHighlights, result.StableHighlights.Count);
+        if (expectedHighlights > 0)
+        {
+            Assert.EndsWith("v1_141.md", result.StableVersionUrl);
+            Assert.Equal("Clean up worktree storage: Remove inactive worktrees.", result.StableHighlights[0]);
+            Assert.Equal("Multiple GitHub Enterprise instances: Use multiple enterprise accounts.", result.StableHighlights[5]);
+            Assert.Single(result.StableFeatureCallouts);
+        }
+        else
+        {
+            Assert.Null(result.StableVersionUrl);
+            Assert.Empty(result.StableFeatureCallouts);
+        }
+
+        if (startDay <= 8 && endDay >= 8)
+        {
+            Assert.NotNull(result.ReleaseNotes);
+            Assert.EndsWith("v1_142.md", result.ReleaseNotes.VersionUrl);
+            Assert.Single(result.ReleaseNotes.Features);
+        }
+        else
+        {
+            Assert.Null(result.ReleaseNotes);
+        }
+    }
+
+    private sealed class ReleaseNotesHttpMessageHandler(
+        int stableVersion = 130,
+        string? stableMarkdown = null,
+        string? insidersMarkdown = null) : HttpMessageHandler
     {
         private const string StableReleaseNotes = """
             ---
             ProductEdition: Stable
+            Date: 2026-07-22
             ---
             Welcome to the 1.130 release of Visual Studio Code.
 
@@ -195,14 +334,14 @@ public class VSCodeReleaseNotesServiceTests
             {
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    RequestMessage = new HttpRequestMessage(HttpMethod.Head, "https://code.visualstudio.com/updates/v1_130")
+                    RequestMessage = new HttpRequestMessage(HttpMethod.Head, $"https://code.visualstudio.com/updates/v1_{stableVersion}")
                 });
             }
 
-            var content = url.EndsWith("v1_130.md", StringComparison.Ordinal)
-                ? StableReleaseNotes
-                : url.EndsWith("v1_131.md", StringComparison.Ordinal)
-                    ? InsidersReleaseNotes
+            var content = url.EndsWith($"v1_{stableVersion}.md", StringComparison.Ordinal)
+                ? stableMarkdown ?? StableReleaseNotes
+                : url.EndsWith($"v1_{stableVersion + 1}.md", StringComparison.Ordinal)
+                    ? insidersMarkdown ?? InsidersReleaseNotes
                     : null;
 
             if (content == null)
