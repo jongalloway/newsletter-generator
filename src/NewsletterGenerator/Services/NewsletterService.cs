@@ -696,18 +696,6 @@ public partial class NewsletterService(
             "GenerateFeatureBulletsAsync: CLI={Cli}, SDK={Sdk}, app={App}, vscodeStable={Stable}, vscodeInsiders={Insiders}",
             cliReleases.Count, sdkReleases.Count, appReleases.Count, vscodeStableHighlights.Count, vscodeFeatures.Count);
 
-        var sourceDataJson = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            cliReleases,
-            sdkReleases,
-            appReleases,
-            vscodeFeatures,
-            vscodeStableHighlights,
-            vscodeReleaseNotesUrl,
-            vscodeStableVersionUrl,
-            model
-        });
-
         const string systemMessage =
             """
             You are a technical editor producing terse slide bullet points from release notes for a developer audience.
@@ -731,17 +719,36 @@ public partial class NewsletterService(
             - The emoji is chosen to match the topic (e.g., 🤖 AI, 🔧 tools, 🖥️ terminal, 🔒 security, 🧩 plugins, ⚙️ config).
 
             CURATION RULES:
-            - Up to 5 bullets per section. Fewer is fine — NEVER invent, pad, or repeat to reach five.
+            - Include up to 8 bullets per product when justified. Use fewer when the week has fewer notable
+              features. NEVER invent, pad, or repeat to reach eight.
+            - Inventory distinct new capabilities across the entire coverage window before selecting bullets.
             - Include only notable, user-facing NEW features. Skip bug fixes, dependency bumps, version-only
               changes, internal refactors, and CI changes.
-            - Condense related changes into a single bullet.
+            - Prioritize developer-facing capabilities over minor configuration changes. Do not let a large,
+              fix-heavy release crowd out features from earlier releases in the coverage window.
+            - Condense related changes into a single bullet, but keep independently useful capabilities separate.
+            - Preserve experimental, preview, opt-in, eligibility, and language-specific caveats.
             - Respect the character limits strictly. Rewrite until the feature is <= 20 chars and the description <= 75 chars.
             - If a product has no notable features this week, output its heading followed by one line: _No notable updates this week._
+            - Before returning, check for omitted notable capabilities and verify every bullet against its source.
 
             OUTPUT REQUIREMENTS:
             - Output ONLY the four sections. No title, no preamble, no commentary, no code fences.
             - Start directly with "## GitHub Copilot app".
             """;
+
+        var sourceDataJson = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            cliReleases,
+            sdkReleases,
+            appReleases,
+            vscodeFeatures,
+            vscodeStableHighlights,
+            vscodeReleaseNotesUrl,
+            vscodeStableVersionUrl,
+            model,
+            systemMessage
+        });
 
         var prompt = BuildFeatureBulletsPrompt(
             cliReleases,

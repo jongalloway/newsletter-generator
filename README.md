@@ -30,6 +30,7 @@ The output is a markdown newsletter. Sections vary by newsletter type:
 - **Copilot CLI/SDK** — Welcome, News & Announcements, Project Updates
 - **VS Code** — Welcome, This Week in VS Code Stable, VS Code Insiders Highlights, News and Announcements (if applicable)
 - **DevTech MVP** — Welcome, Copilot CLI & SDK, VS Code, Visual Studio, recognized major product releases, Developer Blogs, Developer Videos
+- **Feature Bullet Points** - Slide-ready features for Copilot app, CLI, SDK, and VS Code, with up to eight bullets per product when justified. Selection covers the full date range and preserves availability caveats.
 
 ## Information flow
 
