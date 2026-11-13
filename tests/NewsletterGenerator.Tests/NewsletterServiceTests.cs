@@ -177,6 +177,48 @@ public class NewsletterServiceTests
     }
 
     [Fact]
+    public async Task CaptureUsageAfterAttempt_PreservesFailedParseUsageBeforeSuccessfulCorrection()
+    {
+        var capturedUsage = new List<string>();
+        var attempt = 0;
+
+        async Task<string> SendAttemptAsync()
+        {
+            attempt++;
+            return await NewsletterService.CaptureUsageAfterAttemptAsync(
+                () =>
+                {
+                    if (attempt == 1)
+                        throw new JsonException("The structured response was invalid.");
+
+                    return Task.FromResult("corrected response");
+                },
+                () => capturedUsage.Add(attempt == 1 ? "original" : "correction"),
+                _ => { });
+        }
+
+        await Assert.ThrowsAsync<JsonException>(SendAttemptAsync);
+        var correctedResponse = await SendAttemptAsync();
+
+        Assert.Equal("corrected response", correctedResponse);
+        Assert.Equal(["original", "correction"], capturedUsage);
+    }
+
+    [Fact]
+    public async Task CaptureUsageAfterAttempt_DoesNotMaskRequestFailure()
+    {
+        var parsingException = new JsonException("The structured response was invalid.");
+
+        var actualException = await Assert.ThrowsAsync<JsonException>(() =>
+            NewsletterService.CaptureUsageAfterAttemptAsync<string>(
+                () => Task.FromException<string>(parsingException),
+                () => throw new InvalidOperationException("Usage capture failed."),
+                _ => throw new InvalidOperationException("Logging failed.")));
+
+        Assert.Same(parsingException, actualException);
+    }
+
+    [Fact]
     public void NormalizeMarkdownListSpacing_SurroundsListWithoutSeparatingItems()
     {
         var markdown = string.Join(

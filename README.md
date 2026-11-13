@@ -15,8 +15,9 @@ This tool generates a curated weekly newsletter by:
 
 Prompt token totals come from typed SDK usage events scoped to each generation or
 revision, rather than cumulative session totals. Missing usage remains unavailable,
-not zero. Session errors log their category, error codes, and provider request ID
-when the runtime supplies them.
+not zero; run and aggregate summaries label partial totals and show unavailable
+totals as `n/a`. Session errors log their category, error codes, and provider
+request ID when the runtime supplies them.
 
 At startup, you'll choose:
 

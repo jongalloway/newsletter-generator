@@ -2172,27 +2172,68 @@ public partial class NewsletterService(
         });
 
 #pragma warning disable GHCP001
-        var result = await session.SendAndWaitAsync<TResult>(
-            prompt,
-            timeout: TimeSpan.FromSeconds(180));
+        var responseCharacters = 0;
+        return await CaptureUsageAfterAttemptAsync(
+            async () =>
+            {
+                var result = await session.SendAndWaitAsync<TResult>(
+                    prompt,
+                    timeout: TimeSpan.FromSeconds(180));
+                if (result is null)
+                    throw new JsonException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
+
+                responseCharacters = JsonSerializer.Serialize(result).Length;
+                logger.LogInformation(
+                    "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
+                    typeof(TResult).Name,
+                    responseCharacters,
+                    eventCount,
+                    streamedChars);
+                return result;
+            },
+            () => CaptureUsageMetrics(
+                session,
+                operation,
+                prompt.Length,
+                responseCharacters,
+                latestMessageId,
+                usage),
+            exception => logger.LogError(exception, "Failed to capture Copilot usage for {Operation}", operation));
 #pragma warning restore GHCP001
-        if (result is null)
-            throw new JsonException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
-        var responseCharacters = JsonSerializer.Serialize(result).Length;
-        logger.LogInformation(
-            "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
-            typeof(TResult).Name,
-            responseCharacters,
-            eventCount,
-            streamedChars);
-        CaptureUsageMetrics(
-            session,
-            operation,
-            prompt.Length,
-            responseCharacters,
-            latestMessageId,
-            usage);
-        return result;
+    }
+
+    internal static async Task<TResult> CaptureUsageAfterAttemptAsync<TResult>(
+        Func<Task<TResult>> request,
+        Action captureUsage,
+        Action<Exception> logCaptureFailure)
+    {
+        Exception? requestException = null;
+        try
+        {
+            return await request();
+        }
+        catch (Exception exception)
+        {
+            requestException = exception;
+            throw;
+        }
+        finally
+        {
+            try
+            {
+                captureUsage();
+            }
+            catch (Exception exception) when (requestException is not null)
+            {
+                try
+                {
+                    logCaptureFailure(exception);
+                }
+                catch
+                {
+                }
+            }
+        }
     }
 
     internal void LogSessionError(SessionErrorData error, string operation, string sessionId)
