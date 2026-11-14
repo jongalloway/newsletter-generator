@@ -39,6 +39,41 @@ internal sealed record CopilotUsageMetric(
     long? TotalTokens,
     DateTimeOffset CapturedAtUtc);
 
+internal readonly record struct CopilotTokenTotal(long Tokens, int AvailablePromptCount, int PromptCount)
+{
+    public string Format() => PromptCount == 0 || AvailablePromptCount == 0
+        ? "n/a"
+        : AvailablePromptCount == PromptCount
+            ? Tokens.ToString("N0")
+            : $"{Tokens:N0} partial ({AvailablePromptCount}/{PromptCount})";
+
+    public CopilotTokenTotal Add(CopilotTokenTotal other) => new(
+        Tokens + other.Tokens,
+        AvailablePromptCount + other.AvailablePromptCount,
+        PromptCount + other.PromptCount);
+
+    public static CopilotTokenTotal FromMetrics(
+        IEnumerable<CopilotUsageMetric> metrics,
+        Func<CopilotUsageMetric, long?> selectTokens)
+    {
+        var tokens = 0L;
+        var availablePromptCount = 0;
+        var promptCount = 0;
+        foreach (var metric in metrics)
+        {
+            promptCount++;
+            var value = selectTokens(metric);
+            if (value is not long count)
+                continue;
+
+            tokens += count;
+            availablePromptCount++;
+        }
+
+        return new CopilotTokenTotal(tokens, availablePromptCount, promptCount);
+    }
+}
+
 internal sealed record PreviewSection(string Heading, IReadOnlyList<string> Items);
 
 internal sealed class AggregateRunMetrics
@@ -56,9 +91,9 @@ internal sealed class AggregateRunMetrics
     public double TotalWallSeconds { get; private set; }
     public double AverageWallSeconds => TotalRuns == 0 ? 0 : TotalWallSeconds / TotalRuns;
     public int CopilotPromptCount { get; private set; }
-    public long CopilotInputTokens { get; private set; }
-    public long CopilotOutputTokens { get; private set; }
-    public long CopilotTotalTokens { get; private set; }
+    public CopilotTokenTotal CopilotInputTokens { get; private set; }
+    public CopilotTokenTotal CopilotOutputTokens { get; private set; }
+    public CopilotTokenTotal CopilotTotalTokens { get; private set; }
 
     public void AddRun(RunMetrics metrics)
     {
@@ -78,9 +113,12 @@ internal sealed class AggregateRunMetrics
         TotalWallSeconds += metrics.TotalWallSeconds;
 
         CopilotPromptCount += metrics.CopilotUsage.Count;
-        CopilotInputTokens += metrics.CopilotUsage.Sum(m => m.InputTokens ?? 0);
-        CopilotOutputTokens += metrics.CopilotUsage.Sum(m => m.OutputTokens ?? 0);
-        CopilotTotalTokens += metrics.CopilotUsage.Sum(m => m.TotalTokens ?? 0);
+        CopilotInputTokens = CopilotInputTokens.Add(
+            CopilotTokenTotal.FromMetrics(metrics.CopilotUsage, m => m.InputTokens));
+        CopilotOutputTokens = CopilotOutputTokens.Add(
+            CopilotTokenTotal.FromMetrics(metrics.CopilotUsage, m => m.OutputTokens));
+        CopilotTotalTokens = CopilotTotalTokens.Add(
+            CopilotTokenTotal.FromMetrics(metrics.CopilotUsage, m => m.TotalTokens));
     }
 }
 

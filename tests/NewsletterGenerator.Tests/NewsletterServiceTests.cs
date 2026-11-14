@@ -1,4 +1,6 @@
 using System.Text.Json;
+using GitHub.Copilot;
+using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;
 
@@ -6,6 +8,101 @@ namespace NewsletterGenerator.Tests;
 
 public class NewsletterServiceTests
 {
+    [Fact]
+    public void PromptUsage_SumsCallsWithoutCarryingOverEarlierPrompts()
+    {
+        var firstPrompt = new NewsletterService.PromptUsage();
+        firstPrompt.Add(new AssistantUsageData { Model = "model-a", InputTokens = 100, OutputTokens = 20 });
+        firstPrompt.Add(new AssistantUsageData { Model = "model-b", InputTokens = 50, OutputTokens = 10 });
+        Assert.Equal((150L, 30L, 180L), firstPrompt.GetTokenCounts());
+
+        var nextPrompt = new NewsletterService.PromptUsage();
+        nextPrompt.Add(new AssistantUsageData { Model = "model-b", InputTokens = 25, OutputTokens = 5 });
+        Assert.Equal((25L, 5L, 30L), nextPrompt.GetTokenCounts());
+    }
+
+    [Fact]
+    public void PromptUsage_DistinguishesMissingUsageFromZero()
+    {
+        var usage = new NewsletterService.PromptUsage();
+        var missing = usage.GetTokenCounts();
+        Assert.Null(missing.InputTokens);
+        Assert.Null(missing.OutputTokens);
+        Assert.Null(missing.TotalTokens);
+
+        usage.Add(new AssistantUsageData { Model = "model-a", InputTokens = 0, OutputTokens = 0 });
+        Assert.Equal((0L, 0L, 0L), usage.GetTokenCounts());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PromptUsage_DoesNotReportPartialCountsAsComplete(bool missingFirst)
+    {
+        var usage = new NewsletterService.PromptUsage();
+        var complete = new AssistantUsageData { Model = "model-a", InputTokens = 100, OutputTokens = 20 };
+        var incomplete = new AssistantUsageData { Model = "model-b", OutputTokens = 5 };
+        usage.Add(missingFirst ? incomplete : complete);
+        usage.Add(missingFirst ? complete : incomplete);
+
+        var counts = usage.GetTokenCounts();
+        Assert.Null(counts.InputTokens);
+        Assert.Equal(25L, counts.OutputTokens);
+        Assert.Null(counts.TotalTokens);
+    }
+
+    [Fact]
+    public async Task LogSessionError_PreservesStructuredDiagnostics()
+    {
+        var logger = new RecordingLogger();
+        await using var service = new NewsletterService(logger);
+        service.LogSessionError(new SessionErrorData
+        {
+            Message = "Request rejected",
+            ErrorType = "rate_limit",
+            ErrorCode = "user_model_rate_limited",
+            ProviderErrorType = "provider_limit",
+            ProviderErrorCode = "capacity_exceeded",
+            ProviderCallId = "request-123",
+            OriginatingMessageId = "message-456"
+        }, "feature bullets", "session-789");
+
+        Assert.Equal(LogLevel.Error, logger.Level);
+        Assert.Equal("rate_limit", logger.Fields["ErrorType"]);
+        Assert.Equal("user_model_rate_limited", logger.Fields["ErrorCode"]);
+        Assert.Equal("provider_limit", logger.Fields["ProviderErrorType"]);
+        Assert.Equal("capacity_exceeded", logger.Fields["ProviderErrorCode"]);
+        Assert.Equal("request-123", logger.Fields["ProviderCallId"]);
+        Assert.Equal("message-456", logger.Fields["OriginatingMessageId"]);
+        Assert.Equal("session-789", logger.Fields["SessionId"]);
+        Assert.Equal("feature bullets", logger.Fields["Operation"]);
+        Assert.Equal("Request rejected", logger.Fields["Message"]);
+    }
+
+    private sealed class RecordingLogger : ILogger<NewsletterService>
+    {
+        public LogLevel Level { get; private set; }
+        public Dictionary<string, object?> Fields { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Level = logLevel;
+            if (state is IEnumerable<KeyValuePair<string, object?>> fields)
+            {
+                foreach (var field in fields)
+                    Fields[field.Key] = field.Value;
+            }
+        }
+    }
+
     [Theory]
     [InlineData("newsletter-title", "low")]
     [InlineData("welcome-summary", "medium")]
@@ -77,6 +174,48 @@ public class NewsletterServiceTests
             : new InvalidOperationException("The session reported an error.");
 
         Assert.Equal(jsonFailure, NewsletterService.IsTypedResponseParsingFailure(exception));
+    }
+
+    [Fact]
+    public async Task CaptureUsageAfterAttempt_PreservesFailedParseUsageBeforeSuccessfulCorrection()
+    {
+        var capturedUsage = new List<string>();
+        var attempt = 0;
+
+        async Task<string> SendAttemptAsync()
+        {
+            attempt++;
+            return await NewsletterService.CaptureUsageAfterAttemptAsync(
+                () =>
+                {
+                    if (attempt == 1)
+                        throw new JsonException("The structured response was invalid.");
+
+                    return Task.FromResult("corrected response");
+                },
+                () => capturedUsage.Add(attempt == 1 ? "original" : "correction"),
+                _ => { });
+        }
+
+        await Assert.ThrowsAsync<JsonException>(SendAttemptAsync);
+        var correctedResponse = await SendAttemptAsync();
+
+        Assert.Equal("corrected response", correctedResponse);
+        Assert.Equal(["original", "correction"], capturedUsage);
+    }
+
+    [Fact]
+    public async Task CaptureUsageAfterAttempt_DoesNotMaskRequestFailure()
+    {
+        var parsingException = new JsonException("The structured response was invalid.");
+
+        var actualException = await Assert.ThrowsAsync<JsonException>(() =>
+            NewsletterService.CaptureUsageAfterAttemptAsync<string>(
+                () => Task.FromException<string>(parsingException),
+                () => throw new InvalidOperationException("Usage capture failed."),
+                _ => throw new InvalidOperationException("Logging failed.")));
+
+        Assert.Same(parsingException, actualException);
     }
 
     [Fact]

@@ -60,9 +60,9 @@ internal static partial class NewsletterApp
         var totalWorkSeconds = metrics.StageSeconds.Values.Sum();
         var parallelSavedSeconds = Math.Max(0, totalWorkSeconds - metrics.TotalWallSeconds);
         var usagePromptCount = metrics.CopilotUsage.Count;
-        var usageInputTokens = metrics.CopilotUsage.Sum(m => m.InputTokens ?? 0);
-        var usageOutputTokens = metrics.CopilotUsage.Sum(m => m.OutputTokens ?? 0);
-        var usageTotalTokens = metrics.CopilotUsage.Sum(m => m.TotalTokens ?? 0);
+        var usageInputTokens = CopilotTokenTotal.FromMetrics(metrics.CopilotUsage, m => m.InputTokens);
+        var usageOutputTokens = CopilotTokenTotal.FromMetrics(metrics.CopilotUsage, m => m.OutputTokens);
+        var usageTotalTokens = CopilotTokenTotal.FromMetrics(metrics.CopilotUsage, m => m.TotalTokens);
 
         var summaryTable = new Table()
             .Border(TableBorder.Rounded)
@@ -84,7 +84,7 @@ internal static partial class NewsletterApp
         summaryTable.AddRow("Timing", $"Wall [white]{metrics.TotalWallSeconds:F1}s[/], work [white]{totalWorkSeconds:F1}s[/], saved [green]{parallelSavedSeconds:F1}s[/]");
         summaryTable.AddRow("Copilot usage", usagePromptCount == 0
             ? "No prompts sent"
-            : $"{usagePromptCount} prompts [grey](in {usageInputTokens:N0}, out {usageOutputTokens:N0}, total {usageTotalTokens:N0})[/]");
+            : $"{usagePromptCount} prompts [grey](in {usageInputTokens.Format()}, out {usageOutputTokens.Format()}, total {usageTotalTokens.Format()})[/]");
         summaryTable.AddRow("Output", string.IsNullOrWhiteSpace(metrics.OutputPath)
             ? "(none)"
             : $"{Markup.Escape(metrics.OutputPath)} [grey]({metrics.OutputCharacters:N0} chars, {metrics.OutputLines:N0} lines, {metrics.OutputSections} sections)[/]");
@@ -364,7 +364,7 @@ internal static partial class NewsletterApp
         summaryTable.AddRow("Revisions applied", aggregate.RevisedRuns.ToString());
         summaryTable.AddRow("Copied to clipboard", aggregate.ClipboardSuccessRuns.ToString());
         summaryTable.AddRow("Cache", $"hits {aggregate.CacheHits}, misses {aggregate.CacheMisses}, skips {aggregate.CacheSkips}");
-        summaryTable.AddRow("Copilot usage", $"{aggregate.CopilotPromptCount} prompts, in {aggregate.CopilotInputTokens:N0}, out {aggregate.CopilotOutputTokens:N0}, total {aggregate.CopilotTotalTokens:N0}");
+        summaryTable.AddRow("Copilot usage", $"{aggregate.CopilotPromptCount} prompts, in {aggregate.CopilotInputTokens.Format()}, out {aggregate.CopilotOutputTokens.Format()}, total {aggregate.CopilotTotalTokens.Format()}");
         summaryTable.AddRow("Output", $"{aggregate.OutputCharacters:N0} chars, {aggregate.OutputLines:N0} lines");
         summaryTable.AddRow("Timing", $"total {aggregate.TotalWallSeconds:F1}s, avg {aggregate.AverageWallSeconds:F1}s per run");
         summaryTable.AddRow("Warnings", aggregate.WarningCount.ToString());

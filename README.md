@@ -13,6 +13,12 @@ This tool generates a curated weekly newsletter by:
 3. **Summarizing** using GitHub Copilot SDK to create concise, factual summaries
 4. **Caching** generated content to avoid regenerating unchanged sections
 
+Prompt token totals come from typed SDK usage events scoped to each generation or
+revision, rather than cumulative session totals. Missing usage remains unavailable,
+not zero; run and aggregate summaries label partial totals and show unavailable
+totals as `n/a`. Session errors log their category, error codes, and provider
+request ID when the runtime supplies them.
+
 At startup, you'll choose:
 
 - **Newsletter type** - GitHub Copilot CLI/SDK, VS Code Insiders, or DevTech MVP

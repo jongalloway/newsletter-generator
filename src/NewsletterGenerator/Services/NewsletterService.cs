@@ -37,6 +37,34 @@ public partial class NewsletterService(
         }
     }
 
+    internal sealed class PromptUsage
+    {
+        private readonly object sync = new();
+        private bool receivedUsage;
+        private long? inputTokens = 0;
+        private long? outputTokens = 0;
+
+        public void Add(AssistantUsageData usage)
+        {
+            lock (sync)
+            {
+                receivedUsage = true;
+                inputTokens += usage.InputTokens;
+                outputTokens += usage.OutputTokens;
+            }
+        }
+
+        public (long? InputTokens, long? OutputTokens, long? TotalTokens) GetTokenCounts()
+        {
+            lock (sync)
+            {
+                return receivedUsage
+                    ? (inputTokens, outputTokens, inputTokens + outputTokens)
+                    : (null, null, null);
+            }
+        }
+    }
+
     private sealed class StartedSession(CopilotClient client, CopilotSession session) : IAsyncDisposable
     {
         public CopilotSession Session { get; } = session;
@@ -2045,6 +2073,7 @@ public partial class NewsletterService(
     private async Task<string> SendPromptAsync(CopilotSession session, string prompt, string operation)
     {
         logger.LogDebug("SendPromptAsync: sending prompt for {Operation} ({Length} chars)", operation, prompt.Length);
+        var usage = new PromptUsage();
         var latestResponse = new StringBuilder();
         string? latestMessageId = null;
         var eventCount = 0;
@@ -2082,8 +2111,11 @@ public partial class NewsletterService(
                     logger.LogDebug("SessionIdleEvent received after {Count} message events, {StreamedChars} streamed chars",
                         eventCount, streamedChars);
                     break;
+                case AssistantUsageEvent usageEvent:
+                    usage.Add(usageEvent.Data);
+                    break;
                 case SessionErrorEvent err:
-                    logger.LogError("Copilot session error: {Message}", err.Data.Message);
+                    LogSessionError(err.Data, operation, session.SessionId);
                     break;
             }
         });
@@ -2097,7 +2129,7 @@ public partial class NewsletterService(
         var messageId = finalMessage?.Data.MessageId ?? latestMessageId;
         logger.LogInformation("SendPromptAsync: received response ({Length} chars, empty={IsEmpty}, events={Events}, streamedChars={StreamedChars})",
             result.Length, string.IsNullOrWhiteSpace(result), eventCount, streamedChars);
-        await TryCaptureUsageMetricsAsync(session, operation, prompt.Length, result.Length, messageId);
+        CaptureUsageMetrics(session, operation, prompt.Length, result.Length, messageId, usage);
         if (string.IsNullOrWhiteSpace(result))
             logger.LogWarning("SendPromptAsync: AI returned empty response for prompt starting with: {PromptStart}",
                 prompt.Length > 200 ? prompt[..200] : prompt);
@@ -2114,6 +2146,7 @@ public partial class NewsletterService(
             operation,
             prompt.Length,
             typeof(TResult).Name);
+        var usage = new PromptUsage();
         string? latestMessageId = null;
         var eventCount = 0;
         var streamedChars = 0;
@@ -2129,165 +2162,129 @@ public partial class NewsletterService(
                     eventCount++;
                     latestMessageId = message.Data.MessageId;
                     break;
+                case AssistantUsageEvent usageEvent:
+                    usage.Add(usageEvent.Data);
+                    break;
                 case SessionErrorEvent error:
-                    logger.LogError("Copilot session error: {Message}", error.Data.Message);
+                    LogSessionError(error.Data, operation, session.SessionId);
                     break;
             }
         });
 
 #pragma warning disable GHCP001
-        var result = await session.SendAndWaitAsync<TResult>(
-            prompt,
-            timeout: TimeSpan.FromSeconds(180));
+        var responseCharacters = 0;
+        return await CaptureUsageAfterAttemptAsync(
+            async () =>
+            {
+                var result = await session.SendAndWaitAsync<TResult>(
+                    prompt,
+                    timeout: TimeSpan.FromSeconds(180));
+                if (result is null)
+                    throw new JsonException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
+
+                responseCharacters = JsonSerializer.Serialize(result).Length;
+                logger.LogInformation(
+                    "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
+                    typeof(TResult).Name,
+                    responseCharacters,
+                    eventCount,
+                    streamedChars);
+                return result;
+            },
+            () => CaptureUsageMetrics(
+                session,
+                operation,
+                prompt.Length,
+                responseCharacters,
+                latestMessageId,
+                usage),
+            exception => logger.LogError(exception, "Failed to capture Copilot usage for {Operation}", operation));
 #pragma warning restore GHCP001
-        if (result is null)
-            throw new JsonException($"Copilot returned a null {typeof(TResult).Name} response for {operation}.");
-        var responseCharacters = JsonSerializer.Serialize(result).Length;
-        logger.LogInformation(
-            "SendTypedPromptAsync: received {ResponseType} ({Length} chars, events={Events}, streamedChars={StreamedChars})",
-            typeof(TResult).Name,
-            responseCharacters,
-            eventCount,
-            streamedChars);
-        await TryCaptureUsageMetricsAsync(
-            session,
-            operation,
-            prompt.Length,
-            responseCharacters,
-            latestMessageId);
-        return result;
     }
 
-    private async Task TryCaptureUsageMetricsAsync(
+    internal static async Task<TResult> CaptureUsageAfterAttemptAsync<TResult>(
+        Func<Task<TResult>> request,
+        Action captureUsage,
+        Action<Exception> logCaptureFailure)
+    {
+        Exception? requestException = null;
+        try
+        {
+            return await request();
+        }
+        catch (Exception exception)
+        {
+            requestException = exception;
+            throw;
+        }
+        finally
+        {
+            try
+            {
+                captureUsage();
+            }
+            catch (Exception exception) when (requestException is not null)
+            {
+                try
+                {
+                    logCaptureFailure(exception);
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+
+    internal void LogSessionError(SessionErrorData error, string operation, string sessionId)
+    {
+        logger.LogError(
+            "Copilot session error for {Operation} (session={SessionId}, type={ErrorType}, code={ErrorCode}, providerType={ProviderErrorType}, providerCode={ProviderErrorCode}, requestId={ProviderCallId}, messageId={OriginatingMessageId}): {Message}",
+            operation,
+            sessionId,
+            error.ErrorType,
+            error.ErrorCode,
+            error.ProviderErrorType,
+            error.ProviderErrorCode,
+            error.ProviderCallId,
+            error.OriginatingMessageId,
+            error.Message);
+    }
+
+    private void CaptureUsageMetrics(
         CopilotSession session,
         string operation,
         int promptCharacters,
         int outputCharacters,
-        string? messageId)
+        string? messageId,
+        PromptUsage usage)
     {
-        try
+        var (inputTokens, outputTokens, totalTokens) = usage.GetTokenCounts();
+        var metric = new CopilotUsageMetric(
+            operation,
+            session.SessionId,
+            messageId,
+            promptCharacters,
+            outputCharacters,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            DateTimeOffset.UtcNow);
+
+        lock (usageLock)
         {
-            var usage = await session.Rpc.Usage.GetMetricsAsync();
-            var inputTokens = ExtractTokenCount(usage, "InputTokens", "PromptTokens");
-            var outputTokens = ExtractTokenCount(usage, "OutputTokens", "CompletionTokens");
-            var totalTokens = ExtractTokenCount(usage, "TotalTokens", "Tokens");
-
-            var metric = new CopilotUsageMetric(
-                operation,
-                session.SessionId,
-                messageId,
-                promptCharacters,
-                outputCharacters,
-                inputTokens,
-                outputTokens,
-                totalTokens,
-                DateTimeOffset.UtcNow);
-
-            lock (usageLock)
-            {
-                usageMetrics.Add(metric);
-            }
-
-            logger.LogInformation(
-                "Copilot usage captured for {Operation}: in={InputTokens}, out={OutputTokens}, total={TotalTokens}",
-                operation,
-                inputTokens?.ToString() ?? "n/a",
-                outputTokens?.ToString() ?? "n/a",
-                totalTokens?.ToString() ?? "n/a");
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Could not capture usage metrics for {Operation}", operation);
-        }
-    }
-
-    private static long? ExtractTokenCount(object? usage, params string[] candidatePropertyNames)
-    {
-        if (usage is null)
-            return null;
-
-        static bool IsCandidateName(string source, string target)
-        {
-            var normalizedSource = source.Replace("_", string.Empty, StringComparison.Ordinal);
-            var normalizedTarget = target.Replace("_", string.Empty, StringComparison.Ordinal);
-            return normalizedSource.Equals(normalizedTarget, StringComparison.OrdinalIgnoreCase);
+            usageMetrics.Add(metric);
         }
 
-        var queue = new Queue<(object Value, int Depth)>();
-        queue.Enqueue((usage, 0));
+        if (totalTokens is null)
+            logger.LogWarning("Copilot token usage was unavailable or incomplete for {Operation}", operation);
 
-        while (queue.Count > 0)
-        {
-            var (value, depth) = queue.Dequeue();
-            var properties = value.GetType().GetProperties();
-
-            foreach (var property in properties)
-            {
-                object? propertyValue;
-                try
-                {
-                    propertyValue = property.GetValue(value);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                if (propertyValue is null)
-                    continue;
-
-                if (candidatePropertyNames.Any(name => IsCandidateName(property.Name, name))
-                    && TryConvertToLong(propertyValue, out var tokenCount))
-                {
-                    return tokenCount;
-                }
-
-                if (depth >= 1)
-                    continue;
-
-                var propertyType = propertyValue.GetType();
-                if (propertyType.IsPrimitive || propertyType == typeof(string) || propertyType.IsEnum)
-                    continue;
-
-                queue.Enqueue((propertyValue, depth + 1));
-            }
-        }
-
-        return null;
-    }
-
-    private static bool TryConvertToLong(object value, out long converted)
-    {
-        switch (value)
-        {
-            case byte b:
-                converted = b;
-                return true;
-            case short s:
-                converted = s;
-                return true;
-            case int i:
-                converted = i;
-                return true;
-            case long l:
-                converted = l;
-                return true;
-            case float f:
-                converted = (long)f;
-                return true;
-            case double d:
-                converted = (long)d;
-                return true;
-            case decimal dec:
-                converted = (long)dec;
-                return true;
-            case string str when long.TryParse(str, out var parsed):
-                converted = parsed;
-                return true;
-            default:
-                converted = 0;
-                return false;
-        }
+        logger.LogInformation(
+            "Copilot usage captured for {Operation}: in={InputTokens}, out={OutputTokens}, total={TotalTokens}",
+            operation,
+            inputTokens?.ToString() ?? "n/a",
+            outputTokens?.ToString() ?? "n/a",
+            totalTokens?.ToString() ?? "n/a");
     }
 
     private static string BuildProductPrompt(
