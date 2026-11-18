@@ -10,7 +10,7 @@ This tool generates a curated weekly newsletter by:
 
 1. **Fetching** release notes, changelog entries, and blog posts from GitHub
 2. **Filtering** out low-value content (dependency bumps, CI changes, attributions, etc.)
-3. **Summarizing** using GitHub Copilot SDK to create concise, factual summaries
+3. **Summarizing** using Microsoft Copilot SDK to create concise, factual summaries
 4. **Caching** generated content to avoid regenerating unchanged sections
 
 Prompt token totals come from typed SDK usage events scoped to each generation or
@@ -57,7 +57,7 @@ flowchart LR
         INPUT[Date range +\nnewsletter type + model]
         CACHE[CacheService\nsection cache]
         PROMPTS[NewsletterService\nprompts]
-        COPILOT[GitHub Copilot SDK\nCopilotClient + CopilotSession]
+        COPILOT[Microsoft Copilot SDK\nCopilotClient + CopilotSession]
         SECTIONS[Section content + title]
     end
 
@@ -117,16 +117,11 @@ dotnet run
 
 This generates a newsletter using the automatic date logic described above.
 
-### Custom npm registry
+### Copilot runtime download
 
-The GitHub Copilot SDK downloads its platform CLI package during the build. It uses the public npm registry by default and does not read npm's `registry` setting. If your network requires an npm mirror or proxy, set the `CopilotNpmRegistryUrl` environment variable before building.
+The Microsoft Copilot SDK downloads and verifies its platform runtime during the build. To use a runtime release mirror, set `COPILOT_CLI_DOWNLOAD_BASE_URL` or the MSBuild property `CopilotCliReleaseBaseUrl`. See the [.NET SDK installation instructions](https://github.com/microsoft/copilot-sdk/tree/main/dotnet#installation) for other deployment options.
 
-```powershell
-$env:CopilotNpmRegistryUrl = npm config get registry
-dotnet build
-```
-
-This override applies only to the current shell. Set the environment variable in your user or CI configuration if it should persist.
+The runtime runs in process by default, without process-level crash isolation. To retain a separate runtime process, set `COPILOT_SDK_DEFAULT_CONNECTION=stdio` before starting the application.
 
 ### Commands
 
@@ -284,26 +279,26 @@ Filtering rules and summarization prompts can be modified in:
 - `Services/AtomFeedService.cs` - Regex filters for release notes
 - `Services/NewsletterService.cs` - AI prompts and generation logic
 
-## GitHub Copilot SDK features used
+## Microsoft Copilot SDK features used
 
-This project uses the [GitHub.Copilot.SDK](https://www.nuget.org/packages/GitHub.Copilot.SDK) NuGet package and exercises these SDK features:
+This project uses the [Microsoft.Copilot.SDK](https://www.nuget.org/packages/Microsoft.Copilot.SDK) NuGet package and exercises these SDK features:
 
 | Feature | Where | Why |
 | - | - | - |
-| **Streaming** | All AI sessions (`Streaming = true`) | Enables incremental response delivery; delta events are logged for diagnostics |
-| **ReasoningEffort profiles** | `ResolveReasoningEffort(operationProfile)`, `ReasoningEffort = reasoningEffort` | Uses low/medium/high profiles by operation so short summaries stay cheaper and larger sections get more headroom |
+| **Streaming** | All AI sessions (`Events.Streaming = true`) | Enables incremental response delivery; delta events are logged for diagnostics |
+| **ReasoningEffort profiles** | `ResolveReasoningEffort(operationProfile)`, `Inference.ReasoningEffort` | Uses low/medium/high profiles by operation so short summaries stay cheaper and larger sections get more headroom |
 | **SendAndWaitAsync** | `session.SendAndWaitAsync(new MessageOptions { Prompt = prompt })`, `AssistantMessageEvent`, `AssistantMessageDeltaEvent`, `SessionIdleEvent`, `SessionErrorEvent` | Submits prompts and waits for the final assistant message while still streaming deltas and idle events |
-| **Typed structured output** | `SendTypedPromptAsync<CuratedSection>(...)` for DevTech blog and video curation | Returns selected content item IDs, concise display titles, and summaries in one batch; C# restores URLs, normalizes title fallbacks, orders feed-backed categories, and renders deterministic Markdown |
+| **Typed structured output (experimental)** | `SendTypedPromptAsync<CuratedSection>(...)` for DevTech blog and video curation | Returns selected content item IDs, concise display titles, and summaries in one batch; C# restores URLs, normalizes title fallbacks, orders feed-backed categories, and renders deterministic Markdown |
 | **Session hooks** | `OnErrorOccurred`, `OnSessionStart`, `OnSessionEnd` | SDK-level error retry and session lifecycle logging without manual plumbing |
 | **Deterministic session resume** | `BuildSessionId(runContext, workflowStep, model)`, `ResumeSessionAsync(...)` | Reuses the last matching session for repeat runs when a workflow step and run context are available |
 | **ClientName** | All AI sessions (`ClientName = "newsletter-generator"`) | Tags requests with a stable application identity, which is useful for diagnostics and example code |
-| **Permission policy / tool restrictions** | All AI sessions (`AvailableTools = []`, `OnPermissionRequest = PermissionHandler.ApproveAll`) | Uses a least-privilege session policy because newsletter generation does not request tool access |
+| **Permission policy / tool restrictions** | All AI sessions (`Tools.AvailableTools = []`, `Permissions.OnRequest = PermissionHandler.ApproveAll`) | Hides tools during newsletter generation and preserves the existing permission handler |
 | **Model fallback** | `SetModelAsync(nextModel)` | Switches models in-session when the active model fails, instead of restarting from scratch |
-| **Usage metrics** | `session.Rpc.Usage.GetMetricsAsync()`, `session.SessionId` | Captures prompt/output token usage for each operation and ties it to the session ID |
+| **Usage metrics** | `AssistantUsageEvent`, `session.SessionId` | Captures prompt/output token usage for each operation and ties it to the session ID |
 | **PingAsync** | `doctor` command + startup status | Lightweight connectivity check without creating a full session |
 | **ListModelsAsync** | Model selection, `list-models` command | Enumerate available models for interactive selection |
 | **System messages** | `SystemMessageMode.Replace` on all sessions | Full control over system prompt for editorial tone and output formatting |
-| **Infinite sessions (interactive revisions)** | `InfiniteSessions = new InfiniteSessionConfig { Enabled = true }`, `--infinite-sessions` | Keeps multi-pass revision loops in a single long-running session |
+| **Infinite sessions (interactive revisions)** | `State.InfiniteSessions.Enabled`, `--infinite-sessions` | Keeps multi-pass revision loops in a single long-running session |
 | **Event-driven responses** | `AssistantMessageEvent`, `AssistantMessageDeltaEvent`, `SessionIdleEvent`, `SessionErrorEvent` | Collect final responses and streaming deltas via pattern matching |
 | **GetAuthStatusAsync** | Startup status table | Display authentication state before generation |
 

@@ -13,7 +13,7 @@ app.Configure(config =>
         .WithExample(["generate", "--newsletter", "copilot", "--model", "gpt-5.3-codex", "7"]);
 
     config.AddCommand<ListModelsCommand>("list-models")
-        .WithDescription("List models exposed by the GitHub Copilot SDK.");
+        .WithDescription("List models exposed by the Microsoft Copilot SDK.");
 
     config.AddCommand<ClearCacheCommand>("clear-cache")
         .WithDescription("Clear the local .cache directory.");

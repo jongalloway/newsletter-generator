@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
-using GitHub.Copilot;
+using Microsoft.Copilot;
+using Microsoft.Copilot.Rpc;
 using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;
@@ -578,7 +579,7 @@ internal static partial class NewsletterApp
         double CliSeconds,
         bool IsAuthenticated,
         string AuthStatus,
-        IList<ModelInfo>? Models,
+        IList<Model>? Models,
         string SdkStatus,
         string PingStatus,
         double SdkSeconds,
@@ -609,7 +610,7 @@ internal static partial class NewsletterApp
             var sdkTask = Task.Run(async () =>
             {
                 var sw = Stopwatch.StartNew();
-                await using var client = new CopilotClient();
+                await using var client = new CopilotClient(new() { Mode = CopilotClientMode.CodingAgent });
                 var sdkAuthStatus = await client.GetAuthStatusAsync();
 
                 var authed = !string.IsNullOrEmpty(sdkAuthStatus.Login);
@@ -636,7 +637,7 @@ internal static partial class NewsletterApp
             double cliSeconds = 0;
             bool isAuthenticated = false;
             string authStatus = "Unknown", sdkStatus = "Unknown", pingStatus = "Unknown";
-            IList<ModelInfo>? models = null;
+            IList<Model>? models = null;
             double sdkSeconds = 0;
             string? sdkError = null;
 
@@ -665,7 +666,7 @@ internal static partial class NewsletterApp
     /// <summary>
     /// Awaits the pre-started startup task, records metrics, and renders the status table.
     /// </summary>
-    private static async Task<IList<ModelInfo>?> FinishCopilotStartupAsync(
+    private static async Task<IList<Model>?> FinishCopilotStartupAsync(
         Task<CopilotStartupResult> startupTask,
         RunMetrics? metrics = null)
     {
@@ -709,7 +710,7 @@ internal static partial class NewsletterApp
         return result.Models;
     }
 
-    public static async Task<IList<ModelInfo>?> PrintCopilotStartupStatusAsync(RunMetrics? metrics = null)
+    public static async Task<IList<Model>?> PrintCopilotStartupStatusAsync(RunMetrics? metrics = null)
     {
         var task = StartCopilotStartupAsync();
         return await FinishCopilotStartupAsync(task, metrics);
@@ -783,7 +784,7 @@ internal static partial class NewsletterApp
         return value.Length <= max ? value : value[..max] + "...";
     }
 
-    private static async Task<string> SelectModelAsync(string? modelArg, IList<ModelInfo>? cachedModels, bool nonInteractive)
+    private static async Task<string> SelectModelAsync(string? modelArg, IList<Model>? cachedModels, bool nonInteractive)
     {
         if (!string.IsNullOrWhiteSpace(modelArg))
             return modelArg.Trim();
@@ -806,7 +807,7 @@ internal static partial class NewsletterApp
                     {
                         const string taskLabel = "Querying available models";
                         var task = AddInactiveTask(ctx, taskLabel);
-                        await using var client = new CopilotClient();
+                        await using var client = new CopilotClient(new() { Mode = CopilotClientMode.CodingAgent });
                         SetTaskActive(task, taskLabel);
                         task.Increment(40);
                         await client.StartAsync();

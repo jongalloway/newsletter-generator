@@ -1,3 +1,4 @@
+using Microsoft.Copilot;
 using NewsletterGenerator.Services;
 
 namespace NewsletterGenerator.Tests;
@@ -34,5 +35,15 @@ public class NewsletterServiceFallbackTests
     {
         Assert.False(NewsletterService.IsModelFallbackEligible(new InvalidOperationException("prompt validation failed")));
         Assert.False(NewsletterService.IsModelFallbackEligible(new ArgumentException("bad argument")));
+    }
+
+    [Theory]
+    [InlineData("model unavailable", true)]
+    [InlineData("rate limit exceeded", true)]
+    [InlineData("prompt validation failed", false)]
+    public void IsModelFallbackEligible_HandlesSdkRpcErrors(string message, bool expected)
+    {
+        Assert.Equal(expected, NewsletterService.IsModelFallbackEligible(
+            new RemoteRpcException(message, -32000, null, null)));
     }
 }
