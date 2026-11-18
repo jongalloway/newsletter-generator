@@ -1,5 +1,5 @@
 using System.Text.Json;
-using GitHub.Copilot;
+using Microsoft.Copilot;
 using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using NewsletterGenerator.Services;

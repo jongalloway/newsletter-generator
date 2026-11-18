@@ -3,7 +3,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using NewsletterGenerator;
-using GitHub.Copilot;
+using Microsoft.Copilot;
+using Microsoft.Copilot.Rpc;
 using Microsoft.Extensions.Logging;
 using NewsletterGenerator.Models;
 using Spectre.Console;
@@ -129,22 +130,25 @@ public partial class NewsletterService(
         _ => "medium"
     };
 
-    private SessionConfig CreateSessionConfig(
+    private CreateSessionOptions CreateSessionConfig(
         string? model,
         string systemMessageContent,
         string reasoningEffort,
         bool? enableInfiniteSessions = null) => new()
         {
-            AvailableTools = [],
+            Tools = new() { AvailableTools = [] },
             ClientName = CopilotClientName,
-            OnPermissionRequest = PermissionHandler.ApproveAll,
+            Permissions = new() { OnRequest = PermissionHandler.ApproveAll },
             Model = model,
-            Streaming = true,
-            ReasoningEffort = reasoningEffort,
-            Hooks = CreateSessionHooks(),
-            InfiniteSessions = enableInfiniteSessions.HasValue
-            ? new InfiniteSessionConfig { Enabled = enableInfiniteSessions.Value }
-            : null,
+            Events = new() { Streaming = true },
+            Inference = new() { ReasoningEffort = reasoningEffort },
+            Hooks = new() { Handlers = CreateSessionHooks() },
+            State = new()
+            {
+                InfiniteSessions = enableInfiniteSessions.HasValue
+                    ? new() { Enabled = enableInfiniteSessions.Value }
+                    : null
+            },
             SystemMessage = new SystemMessageConfig
             {
                 Mode = SystemMessageMode.Replace,
@@ -152,15 +156,14 @@ public partial class NewsletterService(
             }
         };
 
-    private ResumeSessionConfig CreateResumeSessionConfig(string? model, string systemMessageContent) => new()
+    private ResumeSessionOptions CreateResumeSessionConfig(string? model, string systemMessageContent) => new()
     {
-        AvailableTools = [],
+        Tools = new() { AvailableTools = [] },
         ClientName = CopilotClientName,
-        OnPermissionRequest = PermissionHandler.ApproveAll,
+        Permissions = new() { OnRequest = PermissionHandler.ApproveAll },
         Model = model,
-        Streaming = true,
-        ReasoningEffort = null,
-        Hooks = CreateSessionHooks(),
+        Events = new() { Streaming = true },
+        Hooks = new() { Handlers = CreateSessionHooks() },
         SystemMessage = new SystemMessageConfig
         {
             Mode = SystemMessageMode.Replace,
@@ -189,7 +192,7 @@ public partial class NewsletterService(
             model ?? "(default)",
             reasoningEffort);
 
-        var client = new CopilotClient();
+        var client = new CopilotClient(new() { Mode = CopilotClientMode.CodingAgent });
         await client.StartAsync();
 
         try
@@ -282,7 +285,7 @@ public partial class NewsletterService(
         if (exception is TimeoutException or HttpRequestException or TaskCanceledException)
             return true;
 
-        if (exception is InvalidOperationException)
+        if (exception is InvalidOperationException or RemoteRpcException)
         {
             var message = exception.Message;
             if (string.IsNullOrWhiteSpace(message))
@@ -2171,7 +2174,7 @@ public partial class NewsletterService(
             }
         });
 
-#pragma warning disable GHCP001
+#pragma warning disable MCPSDK001
         var responseCharacters = 0;
         return await CaptureUsageAfterAttemptAsync(
             async () =>
@@ -2199,7 +2202,7 @@ public partial class NewsletterService(
                 latestMessageId,
                 usage),
             exception => logger.LogError(exception, "Failed to capture Copilot usage for {Operation}", operation));
-#pragma warning restore GHCP001
+#pragma warning restore MCPSDK001
     }
 
     internal static async Task<TResult> CaptureUsageAfterAttemptAsync<TResult>(
