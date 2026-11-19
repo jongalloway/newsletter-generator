@@ -177,7 +177,7 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         else if (cached?.LastModified is { } lastModified)
             request.Headers.IfModifiedSince = lastModified;
 
-        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await _http.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotModified && cached is not null
             && (request.Headers.IfNoneMatch.Count > 0 || request.Headers.IfModifiedSince.HasValue))
         {

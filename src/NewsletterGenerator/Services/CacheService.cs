@@ -171,7 +171,6 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
             return (null, false);
         }
 
-        EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         if (!File.Exists(cacheFile))
@@ -236,15 +235,21 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
 
         logger.LogDebug("Saving feed cache: {CacheKey} ({Length} chars)", cacheKey, content.Length);
 
-        EnsureCacheDirectory();
-        var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
-
         var cached = new FeedCacheEntry(content, DateTimeOffset.UtcNow, etag, lastModified);
-
         var json = JsonSerializer.Serialize(cached, IndentedJsonOptions);
 
-        await File.WriteAllTextAsync(cacheFile, json);
-        RecordSaveOutcome(cacheKey, "saved", content.Length);
+        try
+        {
+            EnsureCacheDirectory();
+            var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
+            await File.WriteAllTextAsync(cacheFile, json);
+            RecordSaveOutcome(cacheKey, "saved", content.Length);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            RecordSaveOutcome(cacheKey, "error");
+            logger.LogWarning(ex, "Failed to save feed cache for {CacheKey}", cacheKey);
+        }
     }
 
     private static string FeedCacheKey(string feedUrl)

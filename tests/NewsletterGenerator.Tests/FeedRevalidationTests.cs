@@ -105,6 +105,21 @@ public class FeedRevalidationTests : IDisposable
     }
 
     [Fact]
+    public async Task GitHub_UsesSuccessfulResponseWhenCacheCannotBeWritten()
+    {
+        Directory.CreateDirectory(_cacheDirectory);
+        var blockedCachePath = Path.Combine(_cacheDirectory, "not-a-directory");
+        await File.WriteAllTextAsync(blockedCachePath, "", TestContext.Current.CancellationToken);
+        var cache = new CacheService(NullLogger<CacheService>.Instance, blockedCachePath);
+        var service = new AtomFeedService(NullLogger<AtomFeedService>.Instance, _client, cache);
+        ExpectPage(1, Response(body: Release("new")));
+
+        Assert.Equal("new", Assert.Single((await FetchAsync(service, GitHubFeedUrl)).Entries).Version);
+        Assert.Equal("error", Assert.Single(cache.GetSectionMetrics()).SaveOutcome);
+        Assert.Empty(_handler.Pending);
+    }
+
+    [Fact]
     public async Task GitHub_RevalidatesLaterPagesAndFollowsPageGrowthAndShrinkage()
     {
         var service = CreateService();
