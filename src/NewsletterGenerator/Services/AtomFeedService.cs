@@ -25,7 +25,6 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         CancellationToken cancellationToken = default)
     {
         ServiceLogMessages.FetchingFeed(logger, feedUrl, startDate, endDate);
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("NewsletterGenerator/1.0");
 
         if (IsGitHubReleasesFeed(feedUrl))
         {
@@ -37,24 +36,8 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         string xml;
         try
         {
-            // Try feed cache first
-            var cached = feedCache is not null
-                ? await feedCache.TryGetFeedCacheAsync(feedUrl, FeedCacheMaxAge)
-                : null;
-
-            if (cached is not null)
-            {
-                xml = cached;
-            }
-            else
-            {
-                xml = await _http.GetStringAsync(feedUrl, cancellationToken);
-                ServiceLogMessages.FeedResponseLength(logger, xml.Length);
-
-                // Save to feed cache
-                if (feedCache is not null)
-                    await feedCache.SaveFeedCacheAsync(feedUrl, xml);
-            }
+            xml = await FetchCachedBodyAsync(feedUrl, FeedCacheMaxAge, accept: null, cancellationToken);
+            ServiceLogMessages.FeedResponseLength(logger, xml.Length);
         }
         catch (HttpRequestException ex)
         {
@@ -174,6 +157,44 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
             && uri.AbsolutePath.EndsWith("/releases.atom", StringComparison.OrdinalIgnoreCase);
     }
 
+    private async Task<string> FetchCachedBodyAsync(
+        string url, TimeSpan? maxAge, string? accept, CancellationToken cancellationToken)
+    {
+        var (cached, isFresh) = feedCache is null
+            ? (null, false)
+            : await feedCache.ReadFeedCacheAsync(url, maxAge);
+
+        if (isFresh && cached is not null)
+            return cached.Content;
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.UserAgent.ParseAdd("NewsletterGenerator/1.0");
+        if (accept is not null)
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
+
+        if (EntityTagHeaderValue.TryParse(cached?.ETag, out var etag) && etag != EntityTagHeaderValue.Any)
+            request.Headers.IfNoneMatch.Add(etag);
+        else if (cached?.LastModified is { } lastModified)
+            request.Headers.IfModifiedSince = lastModified;
+
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotModified && cached is not null
+            && (request.Headers.IfNoneMatch.Count > 0 || request.Headers.IfModifiedSince.HasValue))
+        {
+            await feedCache!.SaveFeedCacheAsync(url, cached.Content,
+                response.Headers.ETag?.ToString() ?? cached.ETag,
+                response.Content.Headers.LastModified ?? cached.LastModified);
+            return cached.Content;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (feedCache is not null)
+            await feedCache.SaveFeedCacheAsync(url, body, response.Headers.ETag?.ToString(), response.Content.Headers.LastModified);
+
+        return body;
+    }
+
     private async Task<FeedFetchResult?> TryFetchGitHubReleaseEntriesAsync(
         string feedUrl,
         DateOnly startDate,
@@ -187,18 +208,14 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         var page = 1;
 
         // Creation order is not publication order: recently published drafts can
-        // appear on later pages. Fetch every page before filtering by publication date.
+        // appear on later pages. Revalidate every page before filtering by publication date.
         while (true)
         {
             var pageUrl = $"{apiUrl}?per_page=100&page={page}";
-            using var request = new HttpRequestMessage(HttpMethod.Get, pageUrl);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-            request.Headers.UserAgent.ParseAdd("NewsletterGenerator/1.0");
-
-            HttpResponseMessage response;
+            string json;
             try
             {
-                response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                json = await FetchCachedBodyAsync(pageUrl, maxAge: null, "application/vnd.github+json", cancellationToken);
             }
             catch (HttpRequestException ex)
             {
@@ -210,16 +227,6 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
                 logger.LogWarning(ex, "GitHub releases API request timed out for {Url}", feedUrl);
                 return null;
             }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("GitHub releases API returned {StatusCode} for {Url}", response.StatusCode, feedUrl);
-                response.Dispose();
-                return null;
-            }
-
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            response.Dispose();
 
             using var document = JsonDocument.Parse(json);
             if (document.RootElement.ValueKind != JsonValueKind.Array)

@@ -155,17 +155,23 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     /// </summary>
     public async Task<string?> TryGetFeedCacheAsync(string feedUrl, TimeSpan maxAge)
     {
+        var (entry, isFresh) = await ReadFeedCacheAsync(feedUrl, maxAge);
+        return isFresh ? entry?.Content : null;
+    }
+
+    // A null max age requires revalidation on every use.
+    internal async Task<(FeedCacheEntry? Entry, bool IsFresh)> ReadFeedCacheAsync(string feedUrl, TimeSpan? maxAge)
+    {
+        var cacheKey = FeedCacheKey(feedUrl);
         if (_forceRefresh)
         {
             Interlocked.Increment(ref _cacheSkips);
-            var skipKey = FeedCacheKey(feedUrl);
-            RecordReadOutcome(skipKey, "skip");
-            ServiceLogMessages.CacheSkipForceRefresh(logger, skipKey);
-            return null;
+            RecordReadOutcome(cacheKey, "skip");
+            ServiceLogMessages.CacheSkipForceRefresh(logger, cacheKey);
+            return (null, false);
         }
 
         EnsureCacheDirectory();
-        var cacheKey = FeedCacheKey(feedUrl);
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         if (!File.Exists(cacheFile))
@@ -173,35 +179,33 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
             Interlocked.Increment(ref _cacheMisses);
             RecordReadOutcome(cacheKey, "miss");
             ServiceLogMessages.CacheMissNoFile(logger, cacheKey);
-            return null;
+            return (null, false);
         }
 
         try
         {
             var json = await File.ReadAllTextAsync(cacheFile);
-            var cached = JsonSerializer.Deserialize<CachedItem>(json);
+            var cached = JsonSerializer.Deserialize<FeedCacheEntry>(json);
 
-            if (cached is null)
+            if (string.IsNullOrWhiteSpace(cached?.Content))
             {
                 Interlocked.Increment(ref _cacheMisses);
                 RecordReadOutcome(cacheKey, "miss");
-                return null;
+                return (null, false);
             }
 
             var age = DateTimeOffset.UtcNow - cached.Timestamp;
-            if (age > maxAge)
+            if (maxAge is null || age > maxAge.Value)
             {
                 Interlocked.Increment(ref _cacheMisses);
-                RecordReadOutcome(cacheKey, "expired");
-                logger.LogDebug("Feed cache expired for {CacheKey} (age={AgeMinutes:F0}m, max={MaxMinutes:F0}m)",
-                    cacheKey, age.TotalMinutes, maxAge.TotalMinutes);
-                return null;
+                RecordReadOutcome(cacheKey, maxAge is null ? "revalidate" : "expired");
+                return (cached, false);
             }
 
             Interlocked.Increment(ref _cacheHits);
             RecordReadOutcome(cacheKey, "hit", cached.Content.Length);
             ServiceLogMessages.CacheHit(logger, cacheKey, $"age={age.TotalMinutes:F0}m", cached.Content.Length);
-            return cached.Content;
+            return (cached, true);
         }
         catch (Exception ex)
         {
@@ -210,13 +214,16 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
             ServiceLogMessages.CacheReadFailed(logger, ex, cacheKey);
         }
 
-        return null;
+        return (null, false);
     }
 
     /// <summary>
     /// Saves raw feed content to cache with a timestamp for TTL-based expiry.
     /// </summary>
-    public async Task SaveFeedCacheAsync(string feedUrl, string content)
+    public Task SaveFeedCacheAsync(string feedUrl, string content) =>
+        SaveFeedCacheAsync(feedUrl, content, null, null);
+
+    internal async Task SaveFeedCacheAsync(string feedUrl, string content, string? etag, DateTimeOffset? lastModified)
     {
         var cacheKey = FeedCacheKey(feedUrl);
 
@@ -232,12 +239,7 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
         EnsureCacheDirectory();
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
-        var cached = new CachedItem
-        {
-            Content = content,
-            SourceHash = feedUrl,
-            Timestamp = DateTimeOffset.UtcNow
-        };
+        var cached = new FeedCacheEntry(content, DateTimeOffset.UtcNow, etag, lastModified);
 
         var json = JsonSerializer.Serialize(cached, IndentedJsonOptions);
 
@@ -255,6 +257,8 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
         return $"feed-{host}-{path}-{hash[..12]}";
     }
 }
+
+internal sealed record FeedCacheEntry(string Content, DateTimeOffset Timestamp, string? ETag, DateTimeOffset? LastModified);
 
 public sealed record CacheSectionMetric(
     string Key,

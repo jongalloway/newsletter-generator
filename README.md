@@ -238,10 +238,13 @@ After each interactive generation run, the app prompts whether to start again fr
 
 The tool caches:
 
-- Feed data (atom/RSS feeds)
-- Generated summaries for each section
+- **Atom/RSS feeds:** The raw XML is reused for one hour without a request. After that, the app sends `If-None-Match` when it has an ETag, or `If-Modified-Since` when it only has a Last-Modified value. A `304 Not Modified` reuses the body and renews its freshness. A `200 OK` replaces the body and validators. Without a saved validator (including in older cache entries), the app fetches the full response.
+- **GitHub releases:** The app checks every releases API page on each run, even when the first page is unchanged. Each page has its own cached body and validators. The current page results determine where pagination ends, so removed pages aren't included. If the API fails, the app logs the failure and falls back to the Atom feed rather than using unvalidated API pages.
+- **Generated summaries:** The app uses SHA256 hashes of the source data to reuse unchanged sections.
 
-Cache files are stored in `src/NewsletterGenerator/.cache/` and use SHA256 hashing to detect changes in source data. The app resolves this location relative to the repository root, so it uses the same cache directory whether you run it from `src/NewsletterGenerator` or from the repo root. When source data changes, that section is regenerated. Use the `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
+The app caches raw feed bodies, not parsed entries. It parses and filters the data on each run. Failed requests don't reuse expired bodies. `--force-refresh` skips cache reads and sends unconditional requests, but still writes successful results to the cache.
+
+Cache files are stored in `src/NewsletterGenerator/.cache/`. The app resolves this location relative to the repository root, so it uses the same cache directory whether you run it from `src/NewsletterGenerator` or from the repo root. Use the `clear-cache` command or `--clear-cache` with `generate` to force regeneration of all content.
 
 ## Configuration
 
