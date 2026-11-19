@@ -81,4 +81,21 @@ public class GenerateSettingsTests
         Assert.Equal("high", create.Inference?.ReasoningEffort);
         Assert.Null(resume.Inference?.ReasoningEffort);
     }
+
+    [Theory]
+    [InlineData("auto")]
+    [InlineData("AUTO")]
+    [InlineData(null)]
+    public void CreateSessionConfig_OmitsReasoningEffortForAutomaticModel(string? model)
+    {
+        var service = new NewsletterService(NullLogger<NewsletterService>.Instance);
+        var method = typeof(NewsletterService).GetMethod(
+            "CreateSessionConfig",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        var config = (CreateSessionOptions)method.Invoke(service, [model, "system prompt", "high", null])!;
+
+        Assert.Equal(model, config.Model);
+        Assert.Null(config.Inference?.ReasoningEffort);
+    }
 }

@@ -141,7 +141,12 @@ public partial class NewsletterService(
             Permissions = new() { OnRequest = PermissionHandler.ApproveAll },
             Model = model,
             Events = new() { Streaming = true },
-            Inference = new() { ReasoningEffort = reasoningEffort },
+            Inference = new()
+            {
+                ReasoningEffort = string.IsNullOrWhiteSpace(model) || model.Equals("auto", StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : reasoningEffort
+            },
             Hooks = new() { Handlers = CreateSessionHooks() },
             State = new()
             {
@@ -186,11 +191,12 @@ public partial class NewsletterService(
         bool? enableInfiniteSessions = null)
     {
         var reasoningEffort = ResolveReasoningEffort(operationProfile);
+        var sessionConfig = CreateSessionConfig(model, systemMessageContent, reasoningEffort, enableInfiniteSessions);
         logger.LogInformation(
             "Creating Copilot session for {OperationProfile} (model={Model}, reasoning={ReasoningEffort})",
             operationProfile,
             model ?? "(default)",
-            reasoningEffort);
+            sessionConfig.Inference?.ReasoningEffort ?? "(SDK default)");
 
         var client = new CopilotClient(new() { Mode = CopilotClientMode.CodingAgent });
         await client.StartAsync();
@@ -223,21 +229,20 @@ public partial class NewsletterService(
                     return new StartedSession(client, resumedSession);
                 }
 
-                var newSessionConfig = CreateSessionConfig(model, systemMessageContent, reasoningEffort, enableInfiniteSessions);
-                newSessionConfig.SessionId = targetSessionId;
+                sessionConfig.SessionId = targetSessionId;
 
                 logger.LogInformation(
                     "Creating new session for {WorkflowStep} (sessionId={SessionId}, reason=No matching session found)",
                     workflowStep, targetSessionId);
 
-                var createdSession = await client.CreateSessionAsync(newSessionConfig);
+                var createdSession = await client.CreateSessionAsync(sessionConfig);
                 return new StartedSession(client, createdSession);
             }
 
             logger.LogInformation(
                 "Creating new session (resume disabled; runContext={RunContext}, workflowStep={WorkflowStep})",
                 runContextKey ?? "<none>", workflowStep ?? "<none>");
-            var session = await client.CreateSessionAsync(CreateSessionConfig(model, systemMessageContent, reasoningEffort, enableInfiniteSessions));
+            var session = await client.CreateSessionAsync(sessionConfig);
             return new StartedSession(client, session);
         }
         catch

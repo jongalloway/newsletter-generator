@@ -286,7 +286,7 @@ This project uses the [Microsoft.Copilot.SDK](https://www.nuget.org/packages/Mic
 | Feature | Where | Why |
 | - | - | - |
 | **Streaming** | All AI sessions (`Events.Streaming = true`) | Enables incremental response delivery; delta events are logged for diagnostics |
-| **ReasoningEffort profiles** | `ResolveReasoningEffort(operationProfile)`, `Inference.ReasoningEffort` | Uses low/medium/high profiles by operation so short summaries stay cheaper and larger sections get more headroom |
+| **ReasoningEffort profiles** | `ResolveReasoningEffort(operationProfile)`, `Inference.ReasoningEffort` | Uses low/medium/high profiles for explicit models; `auto` and the SDK default use the runtime's reasoning settings |
 | **SendAndWaitAsync** | `session.SendAndWaitAsync(new MessageOptions { Prompt = prompt })`, `AssistantMessageEvent`, `AssistantMessageDeltaEvent`, `SessionIdleEvent`, `SessionErrorEvent` | Submits prompts and waits for the final assistant message while still streaming deltas and idle events |
 | **Typed structured output (experimental)** | `SendTypedPromptAsync<CuratedSection>(...)` for DevTech blog and video curation | Returns selected content item IDs, concise display titles, and summaries in one batch; C# restores URLs, normalizes title fallbacks, orders feed-backed categories, and renders deterministic Markdown |
 | **Session hooks** | `OnErrorOccurred`, `OnSessionStart`, `OnSessionEnd` | SDK-level error retry and session lifecycle logging without manual plumbing |
