@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -88,6 +89,39 @@ public class FeedRevalidationTests : IDisposable
     }
 
     [Fact]
+    public async Task Atom_DoesNotRenewAnEntryChangedSinceTheValidatorWasRead()
+    {
+        var cache = new CacheService(NullLogger<CacheService>.Instance, _cacheDirectory);
+        await cache.SaveFeedCacheAsync(FeedUrl, Atom("old"), "\"old\"", null, FeedUrl);
+        var (oldEntry, _) = await cache.ReadFeedCacheAsync(FeedUrl, TimeSpan.Zero);
+        Assert.NotNull(oldEntry);
+
+        await cache.SaveFeedCacheAsync(FeedUrl, Atom("new"), "\"new\"", null, FeedUrl);
+        var current = await cache.RenewFeedCacheAsync(
+            FeedUrl, oldEntry, "\"old-renewed\"", null, FeedUrl);
+
+        Assert.NotNull(current);
+        Assert.Equal(Atom("new"), current.Content);
+        Assert.Equal("\"new\"", current.ETag);
+    }
+
+    [Fact]
+    public async Task Atom_RetriesWithoutValidatorsWhen304RedirectTargetChanges()
+    {
+        var service = CreateService();
+        const string oldTarget = "https://cdn.example.com/old-feed.xml";
+        const string newTarget = "https://cdn.example.com/new-feed.xml";
+        _handler.Expect(FeedUrl, Response(body: Atom("old"), etag: "\"old\""), effectiveUrl: oldTarget);
+        await FetchAsync(service, FeedUrl);
+        await ExpireAtomCacheAsync();
+
+        _handler.Expect(FeedUrl, Response(HttpStatusCode.NotModified), etag: "\"old\"", effectiveUrl: newTarget);
+        _handler.Expect(FeedUrl, Response(body: Atom("new"), etag: "\"new\""), effectiveUrl: newTarget);
+        Assert.Equal("new", Assert.Single((await FetchAsync(service, FeedUrl)).Entries).Version);
+        Assert.Empty(_handler.Pending);
+    }
+
+    [Fact]
     public async Task Atom_ForceRefreshBypassesFreshAndExpiredCacheReads()
     {
         var forced = CreateService(forceRefresh: true);
@@ -101,6 +135,33 @@ public class FeedRevalidationTests : IDisposable
         _handler.Expect(FeedUrl, Response(body: Atom("expired")));
         Assert.Equal("expired", Assert.Single((await FetchAsync(forced, FeedUrl)).Entries).Version);
         Assert.Equal("expired", Assert.Single((await FetchAsync(CreateService(), FeedUrl)).Entries).Version);
+        Assert.Empty(_handler.Pending);
+    }
+
+    [Fact]
+    public async Task GitHub_RejectsErrorStatusBeforeReadingBodyAndFallsBackToAtom()
+    {
+        var service = CreateService();
+        ExpectPage(1, new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+        {
+            Content = new ThrowingContent()
+        });
+        _handler.Expect(GitHubFeedUrl, Response(body: Atom("fallback")));
+
+        Assert.Equal("fallback", Assert.Single((await FetchAsync(service, GitHubFeedUrl)).Entries).Version);
+        Assert.Empty(_handler.Pending);
+    }
+
+    [Fact]
+    public async Task Atom_TimesOutWhileReadingSuccessfulResponseBody()
+    {
+        _client.Timeout = TimeSpan.FromMilliseconds(100);
+        var service = CreateService();
+        _handler.Expect(FeedUrl, Response(content: new BlockingContent()));
+
+        var stopwatch = Stopwatch.StartNew();
+        Assert.Empty((await FetchAsync(service, FeedUrl)).Entries);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
         Assert.Empty(_handler.Pending);
     }
 
@@ -186,16 +247,50 @@ public class FeedRevalidationTests : IDisposable
         """;
 
     private static HttpResponseMessage Response(HttpStatusCode status = HttpStatusCode.OK, string? body = null,
-        string? etag = null, DateTimeOffset? lastModified = null)
+        string? etag = null, DateTimeOffset? lastModified = null, HttpContent? content = null)
     {
         var response = new HttpResponseMessage(status);
         if (body is not null)
             response.Content = new StringContent(body);
+        else if (content is not null)
+            response.Content = content;
         if (etag is not null)
             response.Headers.ETag = EntityTagHeaderValue.Parse(etag);
         if (lastModified is not null)
             response.Content.Headers.LastModified = lastModified;
         return response;
+    }
+
+    private sealed class BlockingContent : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context) =>
+            Task.Delay(Timeout.InfiniteTimeSpan);
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream, System.Net.TransportContext? context, CancellationToken cancellationToken) =>
+            Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
+
+    private sealed class ThrowingContent : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context) =>
+            throw new InvalidOperationException("The error response body should not be read.");
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream, System.Net.TransportContext? context, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The error response body should not be read.");
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
     }
 
     public void Dispose()
@@ -207,10 +302,11 @@ public class FeedRevalidationTests : IDisposable
 
     private sealed class QueuedHandler : HttpMessageHandler
     {
-        public Queue<(string Url, HttpResponseMessage Response, string? ETag, DateTimeOffset? LastModified)> Pending { get; } = new();
+        public Queue<(string Url, HttpResponseMessage Response, string? ETag, DateTimeOffset? LastModified, string? EffectiveUrl)> Pending { get; } = new();
 
-        public void Expect(string url, HttpResponseMessage response, string? etag = null, DateTimeOffset? lastModified = null) =>
-            Pending.Enqueue((url, response, etag, lastModified));
+        public void Expect(string url, HttpResponseMessage response, string? etag = null,
+            DateTimeOffset? lastModified = null, string? effectiveUrl = null) =>
+            Pending.Enqueue((url, response, etag, lastModified, effectiveUrl));
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -218,6 +314,9 @@ public class FeedRevalidationTests : IDisposable
             Assert.Equal(expected.Url, request.RequestUri?.AbsoluteUri);
             Assert.Equal(expected.ETag, request.Headers.IfNoneMatch.SingleOrDefault()?.ToString());
             Assert.Equal(expected.LastModified, request.Headers.IfModifiedSince);
+            if (expected.EffectiveUrl is not null)
+                request.RequestUri = new Uri(expected.EffectiveUrl);
+            expected.Response.RequestMessage = request;
             return Task.FromResult(expected.Response);
         }
     }

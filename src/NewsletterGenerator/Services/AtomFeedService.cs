@@ -167,33 +167,74 @@ public partial class AtomFeedService(ILogger<AtomFeedService> logger, HttpClient
         if (isFresh && cached is not null)
             return cached.Content;
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (_http.Timeout != Timeout.InfiniteTimeSpan)
+            timeoutSource.CancelAfter(_http.Timeout);
+
+        using var request = CreateFeedRequest(url, accept, cached, includeValidators: true);
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token);
+        var effectiveUrl = response.RequestMessage?.RequestUri?.AbsoluteUri ?? url;
+        if (response.StatusCode == HttpStatusCode.NotModified && cached is not null
+            && (request.Headers.IfNoneMatch.Count > 0 || request.Headers.IfModifiedSince.HasValue))
+        {
+            var cachedUrl = cached.EffectiveUrl ?? url;
+            if (SameResponseUrl(cachedUrl, effectiveUrl))
+            {
+                var renewed = await feedCache!.RenewFeedCacheAsync(url, cached,
+                    response.Headers.ETag?.ToString(),
+                    response.Content.Headers.LastModified,
+                    effectiveUrl);
+                if (renewed is not null)
+                    return renewed.Content;
+            }
+
+            using var retryRequest = CreateFeedRequest(url, accept, cached, includeValidators: false);
+            using var retryResponse = await _http.SendAsync(
+                retryRequest, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token);
+            return await ReadAndCacheResponseAsync(url, retryResponse, timeoutSource.Token);
+        }
+
+        return await ReadAndCacheResponseAsync(url, response, timeoutSource.Token);
+    }
+
+    private HttpRequestMessage CreateFeedRequest(
+        string url, string? accept, FeedCacheEntry? cached, bool includeValidators)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd("NewsletterGenerator/1.0");
         if (accept is not null)
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
 
-        if (EntityTagHeaderValue.TryParse(cached?.ETag, out var etag) && etag != EntityTagHeaderValue.Any)
-            request.Headers.IfNoneMatch.Add(etag);
-        else if (cached?.LastModified is { } lastModified)
-            request.Headers.IfModifiedSince = lastModified;
-
-        using var response = await _http.SendAsync(request, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotModified && cached is not null
-            && (request.Headers.IfNoneMatch.Count > 0 || request.Headers.IfModifiedSince.HasValue))
+        if (includeValidators)
         {
-            await feedCache!.SaveFeedCacheAsync(url, cached.Content,
-                response.Headers.ETag?.ToString() ?? cached.ETag,
-                response.Content.Headers.LastModified ?? cached.LastModified);
-            return cached.Content;
+            if (EntityTagHeaderValue.TryParse(cached?.ETag, out var etag) && etag != EntityTagHeaderValue.Any)
+                request.Headers.IfNoneMatch.Add(etag);
+            else if (cached?.LastModified is { } lastModified)
+                request.Headers.IfModifiedSince = lastModified;
         }
 
+        return request;
+    }
+
+    private async Task<string> ReadAndCacheResponseAsync(
+        string url, HttpResponseMessage response, CancellationToken cancellationToken)
+    {
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (feedCache is not null)
-            await feedCache.SaveFeedCacheAsync(url, body, response.Headers.ETag?.ToString(), response.Content.Headers.LastModified);
+        {
+            var effectiveUrl = response.RequestMessage?.RequestUri?.AbsoluteUri ?? url;
+            await feedCache.SaveFeedCacheAsync(
+                url, body, response.Headers.ETag?.ToString(), response.Content.Headers.LastModified, effectiveUrl);
+        }
 
         return body;
     }
+
+    private static bool SameResponseUrl(string first, string second) =>
+        Uri.TryCreate(first, UriKind.Absolute, out var firstUri)
+        && Uri.TryCreate(second, UriKind.Absolute, out var secondUri)
+        && firstUri.Equals(secondUri);
 
     private async Task<FeedFetchResult?> TryFetchGitHubReleaseEntriesAsync(
         string feedUrl,
