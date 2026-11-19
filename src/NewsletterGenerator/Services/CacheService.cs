@@ -155,17 +155,22 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
     /// </summary>
     public async Task<string?> TryGetFeedCacheAsync(string feedUrl, TimeSpan maxAge)
     {
+        var (entry, isFresh) = await ReadFeedCacheAsync(feedUrl, maxAge);
+        return isFresh ? entry?.Content : null;
+    }
+
+    // A null max age requires revalidation on every use.
+    internal async Task<(FeedCacheEntry? Entry, bool IsFresh)> ReadFeedCacheAsync(string feedUrl, TimeSpan? maxAge)
+    {
+        var cacheKey = FeedCacheKey(feedUrl);
         if (_forceRefresh)
         {
             Interlocked.Increment(ref _cacheSkips);
-            var skipKey = FeedCacheKey(feedUrl);
-            RecordReadOutcome(skipKey, "skip");
-            ServiceLogMessages.CacheSkipForceRefresh(logger, skipKey);
-            return null;
+            RecordReadOutcome(cacheKey, "skip");
+            ServiceLogMessages.CacheSkipForceRefresh(logger, cacheKey);
+            return (null, false);
         }
 
-        EnsureCacheDirectory();
-        var cacheKey = FeedCacheKey(feedUrl);
         var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
 
         if (!File.Exists(cacheFile))
@@ -173,35 +178,33 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
             Interlocked.Increment(ref _cacheMisses);
             RecordReadOutcome(cacheKey, "miss");
             ServiceLogMessages.CacheMissNoFile(logger, cacheKey);
-            return null;
+            return (null, false);
         }
 
         try
         {
             var json = await File.ReadAllTextAsync(cacheFile);
-            var cached = JsonSerializer.Deserialize<CachedItem>(json);
+            var cached = JsonSerializer.Deserialize<FeedCacheEntry>(json);
 
-            if (cached is null)
+            if (string.IsNullOrWhiteSpace(cached?.Content))
             {
                 Interlocked.Increment(ref _cacheMisses);
                 RecordReadOutcome(cacheKey, "miss");
-                return null;
+                return (null, false);
             }
 
             var age = DateTimeOffset.UtcNow - cached.Timestamp;
-            if (age > maxAge)
+            if (maxAge is null || age > maxAge.Value)
             {
                 Interlocked.Increment(ref _cacheMisses);
-                RecordReadOutcome(cacheKey, "expired");
-                logger.LogDebug("Feed cache expired for {CacheKey} (age={AgeMinutes:F0}m, max={MaxMinutes:F0}m)",
-                    cacheKey, age.TotalMinutes, maxAge.TotalMinutes);
-                return null;
+                RecordReadOutcome(cacheKey, maxAge is null ? "revalidate" : "expired");
+                return (cached, false);
             }
 
             Interlocked.Increment(ref _cacheHits);
             RecordReadOutcome(cacheKey, "hit", cached.Content.Length);
             ServiceLogMessages.CacheHit(logger, cacheKey, $"age={age.TotalMinutes:F0}m", cached.Content.Length);
-            return cached.Content;
+            return (cached, true);
         }
         catch (Exception ex)
         {
@@ -210,13 +213,20 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
             ServiceLogMessages.CacheReadFailed(logger, ex, cacheKey);
         }
 
-        return null;
+        return (null, false);
     }
 
     /// <summary>
     /// Saves raw feed content to cache with a timestamp for TTL-based expiry.
     /// </summary>
-    public async Task SaveFeedCacheAsync(string feedUrl, string content)
+    public Task SaveFeedCacheAsync(string feedUrl, string content) =>
+        SaveFeedCacheAsync(feedUrl, content, null, null);
+
+    internal async Task SaveFeedCacheAsync(string feedUrl, string content, string? etag, DateTimeOffset? lastModified)
+        => await SaveFeedCacheAsync(feedUrl, content, etag, lastModified, null);
+
+    internal async Task SaveFeedCacheAsync(
+        string feedUrl, string content, string? etag, DateTimeOffset? lastModified, string? effectiveUrl)
     {
         var cacheKey = FeedCacheKey(feedUrl);
 
@@ -226,23 +236,104 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
             ServiceLogMessages.CacheSaveSkippedEmpty(logger, cacheKey);
             return;
         }
-
         logger.LogDebug("Saving feed cache: {CacheKey} ({Length} chars)", cacheKey, content.Length);
 
-        EnsureCacheDirectory();
-        var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
-
-        var cached = new CachedItem
+        try
         {
-            Content = content,
-            SourceHash = feedUrl,
-            Timestamp = DateTimeOffset.UtcNow
-        };
+            EnsureCacheDirectory();
+            var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
+            await using var cacheLock = await AcquireFeedCacheLockAsync(cacheFile);
+            var cached = new FeedCacheEntry(content, DateTimeOffset.UtcNow, etag, lastModified, effectiveUrl);
+            await WriteFeedCacheEntryAsync(cacheFile, cached);
+            RecordSaveOutcome(cacheKey, "saved", content.Length);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            RecordSaveOutcome(cacheKey, "error");
+            logger.LogWarning(ex, "Failed to save feed cache for {CacheKey}", cacheKey);
+        }
+    }
 
-        var json = JsonSerializer.Serialize(cached, IndentedJsonOptions);
+    internal async Task<FeedCacheEntry?> RenewFeedCacheAsync(
+        string feedUrl,
+        FeedCacheEntry expectedEntry,
+        string? etag,
+        DateTimeOffset? lastModified,
+        string effectiveUrl)
+    {
+        var cacheKey = FeedCacheKey(feedUrl);
 
-        await File.WriteAllTextAsync(cacheFile, json);
-        RecordSaveOutcome(cacheKey, "saved", content.Length);
+        try
+        {
+            EnsureCacheDirectory();
+            var cacheFile = Path.Combine(_cacheDir, $"{cacheKey}.json");
+            await using var cacheLock = await AcquireFeedCacheLockAsync(cacheFile);
+            var current = await ReadFeedCacheEntryAsync(cacheFile);
+            if (current is null)
+                return null;
+
+            if (current != expectedEntry)
+                return current;
+
+            var renewed = current with
+            {
+                Timestamp = DateTimeOffset.UtcNow,
+                ETag = etag ?? current.ETag,
+                LastModified = lastModified ?? current.LastModified,
+                EffectiveUrl = effectiveUrl
+            };
+            await WriteFeedCacheEntryAsync(cacheFile, renewed);
+            RecordSaveOutcome(cacheKey, "saved", current.Content.Length);
+            return renewed;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            RecordSaveOutcome(cacheKey, "error");
+            logger.LogWarning(ex, "Failed to renew feed cache for {CacheKey}", cacheKey);
+            return null;
+        }
+    }
+
+    private async Task<FileStream> AcquireFeedCacheLockAsync(string cacheFile)
+    {
+        var lockFile = $"{cacheFile}.lock";
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            try
+            {
+                return new FileStream(lockFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException) when (attempt < 199)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(25));
+            }
+        }
+
+        throw new IOException($"Timed out waiting for feed cache lock: {Path.GetFileName(cacheFile)}");
+    }
+
+    private static async Task<FeedCacheEntry?> ReadFeedCacheEntryAsync(string cacheFile)
+    {
+        if (!File.Exists(cacheFile))
+            return null;
+
+        var json = await File.ReadAllTextAsync(cacheFile);
+        return JsonSerializer.Deserialize<FeedCacheEntry>(json);
+    }
+
+    private static async Task WriteFeedCacheEntryAsync(string cacheFile, FeedCacheEntry entry)
+    {
+        var temporaryFile = $"{cacheFile}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await File.WriteAllTextAsync(temporaryFile, JsonSerializer.Serialize(entry, IndentedJsonOptions));
+            File.Move(temporaryFile, cacheFile, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryFile))
+                File.Delete(temporaryFile);
+        }
     }
 
     private static string FeedCacheKey(string feedUrl)
@@ -255,6 +346,13 @@ public class CacheService(ILogger<CacheService> logger, string? cacheDirectory =
         return $"feed-{host}-{path}-{hash[..12]}";
     }
 }
+
+internal sealed record FeedCacheEntry(
+    string Content,
+    DateTimeOffset Timestamp,
+    string? ETag,
+    DateTimeOffset? LastModified,
+    string? EffectiveUrl = null);
 
 public sealed record CacheSectionMetric(
     string Key,
